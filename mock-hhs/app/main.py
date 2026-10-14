@@ -8,8 +8,9 @@ from fastapi.responses import JSONResponse
 from . import config
 from .db import init_db
 from .errors import OhvpsError, ohvps_error_handler
-from .routers import consent, gkd
-from .seed import BANKS, TEST_USERS
+from .generator.personas import PERSONAS
+from .routers import consent, data, gkd
+from .seed import BANKS
 
 @asynccontextmanager
 async def lifespan(_app):
@@ -44,6 +45,7 @@ async def validation_handler(request, exc: RequestValidationError):
 
 app.include_router(consent.router)
 app.include_router(gkd.router)
+app.include_router(data.router)
 
 
 @app.get("/_mock/health", tags=["Mock yardımcı"])
@@ -57,6 +59,14 @@ def info():
     return {
         "bankalar": [{"hhsKod": k, "ad": v["name"]} for k, v in BANKS.items()],
         "yosKodlari": sorted(config.ALLOWED_YOS_CODES),
-        "testKullanicilari": [{"tckn": k, "ad": v["name"], "sifre": v["password"]} for k, v in TEST_USERS.items()],
+        "testKullanicilari": [
+            {"tckn": k, "ad": p["name"], "sifre": p["password"], "dogumTarihi": p["birth_date"], "telefon": p["phone"],
+             "sehir": p["city"], "meslek": p["job"], "beyanEdilenAylikGelir": str(p["declared_monthly_income"]),
+             "bankalar": sorted({a["bank"] for a in p["accounts"]} | {c["bank"] for c in p["cards"]}),
+             "hesaplar": [{"hspRef": a["ref"], "hhsKod": a["bank"], "urun": a["product"], "prBrm": a["currency"],
+                           "kmhLimit": str(a["kmh_limit"])} for a in p["accounts"]],
+             "kartlar": [{"kartRef": c["ref"], "hhsKod": c["bank"], "urun": c["product"], "tip": c["kartTipi"],
+                          "limit": str(c.get("limit", "")), "hesapKesimGunu": c.get("statement_day")} for c in p["cards"]]}
+            for k, p in PERSONAS.items()],
         "testSmsKodu": config.TEST_OTP,
     }

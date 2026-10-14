@@ -64,3 +64,15 @@ def consent_revoked():
 
 def unauthorized(msg="Erişim belirteci geçersiz veya süresi dolmuş."):
     return OhvpsError(401, "TR.OHVPS.Connection.InvalidToken", msg)
+
+
+def exceeded_rate():
+    return OhvpsError(429, "TR.OHVPS.Connection.ExceededRate", "Sistem tetikli sorgu kotası aşıldı.")
+
+
+def permission_missing(izin: str):
+    return OhvpsError(403, "TR.OHVPS.Business.IncorrectPermissionType", f"Bu sorgu için {izin} izni gerekli.")
+
+
+def resource_not_found(msg="Kaynak bulunamadı veya rıza kapsamında değil."):
+    return OhvpsError(404, "TR.OHVPS.Resource.NotFound", msg)

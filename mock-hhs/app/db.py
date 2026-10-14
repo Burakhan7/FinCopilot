@@ -67,6 +67,17 @@ class GkdSession(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
+class QueryLog(Base):
+    """Sistem tetikli (PSU-Initiated=H) başarılı sorgular — günlük kota için."""
+    __tablename__ = "query_log"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    riza_no: Mapped[str] = mapped_column(String(64), index=True)
+    resource: Mapped[str] = mapped_column(String(200))
+    day: Mapped[str] = mapped_column(String(10), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 _connect_args = {"check_same_thread": False} if config.DATABASE_URL.startswith("sqlite") else {}
 engine = create_engine(config.DATABASE_URL, connect_args=_connect_args)
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)

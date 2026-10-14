@@ -24,3 +24,10 @@ ACCESS_TOKEN_TTL = timedelta(seconds=int(os.getenv("MOCK_HHS_ACCESS_TOKEN_TTL_SE
 MAX_CONSENT_DAYS = {"B": 183, "K": 366}
 MIN_CONSENT = timedelta(days=1)
 MAX_TX_HISTORY_DAYS = 366  # işlem sorgu aralığı geçmiş/gelecek en fazla 12 ay
+
+# Hesap bilgisi sorgu kuralları (ÖHVPS)
+PSU_WINDOW = {"B": timedelta(days=31), "K": timedelta(days=7)}   # ÖHK tetikli (PSU-Initiated=E)
+SYSTEM_WINDOW = timedelta(hours=24)                               # sistem tetikli (PSU-Initiated=H)
+SYSTEM_DAILY_LIMIT = {"B": 4}                                     # bireysel: günde 4 başarılı sorgu
+SYSTEM_HOURLY_LIMIT = {"K": 12}                                   # kurumsal: saatte 12
+MAX_PAGE_SIZE = int(os.getenv("MOCK_HHS_MAX_PAGE_SIZE", "100"))
