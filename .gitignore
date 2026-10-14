@@ -1,0 +1,53 @@
+# --- Genel ---
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# --- IDE ---
+.idea/
+.vscode/
+*.swp
+
+# --- .NET (api/) ---
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+appsettings.*.local.json
+
+# --- Python (ai-service/, mock-hhs/) ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# --- Flutter (mobile/) ---
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+mobile/android/local.properties
+mobile/ios/Pods/
+mobile/ios/Flutter/Generated.xcconfig
+google-services.json
+GoogleService-Info.plist
+
+# --- Veri / model ---
+*.sqlite
+*.db
+models/*.bin
+models/*.gguf
+data/raw/
