@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% set labels = {
+  "01": "Temel hesap bilgisi", "02": "Ayrıntılı hesap bilgisi", "03": "Bakiye bilgisi",
+  "04": "Temel işlem bilgisi", "05": "Ayrıntılı işlem bilgisi", "06": "Anlık bakiye bildirimi",
+  "07": "Temel kart bilgisi", "08": "Detaylı kart bilgisi", "09": "Ayrıntılı kart işlem bilgisi"} %}
+{% block content %}
+<h1>Merhaba {{ user.name }}</h1>
+<p><b>FinCopilot</b> aşağıdaki bilgilere <b>{{ riza.erisim_izni_son_trh.strftime("%d.%m.%Y") }}</b> tarihine kadar erişmek istiyor. Paylaşmak istediklerinizi seçin.</p>
+<div class="perm"><ul style="margin:0;padding-left:18px">
+  {% for i in riza.izin_tur %}<li>{{ labels.get(i, i) }}</li>{% endfor %}
+</ul></div>
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form method="post" action="/gkd/{{ riza.riza_no }}/onay">
+  <input type="hidden" name="sid" value="{{ sid }}">
+  {% if accounts %}<h2>Hesaplar</h2>
+    {% for a in accounts %}
+    <label class="item"><input type="checkbox" name="hspRef" value="{{ a.hspRef }}" checked>
+      <span><span class="t">{{ a.hspUrunAdi }} ({{ a.prBrm }})</span><br><span class="s">{{ a.hspNo[:4] }} **** **** {{ a.hspNo[-4:] }}</span></span></label>
+    {% endfor %}
+  {% endif %}
+  {% if cards %}<h2>Kartlar</h2>
+    {% for k in cards %}
+    <label class="item"><input type="checkbox" name="kartRef" value="{{ k.kartRef }}" checked>
+      <span><span class="t">{{ k.kartUrunAdi }}</span><br><span class="s">**** {{ k.kartSonNo }} · {{ "Kredi kartı" if k.kartTipi == "K" else "Banka kartı" }}</span></span></label>
+    {% endfor %}
+  {% endif %}
+  <button class="primary" type="submit" name="islem" value="onay">Onayla</button>
+  <button class="secondary" type="submit" name="islem" value="vazgec" formnovalidate>Vazgeç</button>
+</form>
+<p class="hint">Uygulama yalnızca bilgileri okuyabilir; para transferi yapamaz. Onayınızı istediğiniz zaman bankanızdan iptal edebilirsiniz.</p>
+{% endblock %}

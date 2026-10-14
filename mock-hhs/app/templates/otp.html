@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>SMS doğrulama</h1>
+<p>Kayıtlı telefonunuza gönderilen 6 haneli kodu girin.</p>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<form method="post" action="/gkd/{{ riza.riza_no }}/otp">
+  <input type="hidden" name="sid" value="{{ sid }}">
+  <label for="otp">SMS kodu</label>
+  <input id="otp" name="otp" type="text" inputmode="numeric" maxlength="6" required autocomplete="one-time-code">
+  <button class="primary" type="submit">Doğrula</button>
+</form>
+<p class="hint">Simülasyon kodu: {{ test_otp }}</p>
+{% endblock %}

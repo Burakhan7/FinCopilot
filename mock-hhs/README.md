@@ -1,13 +1,73 @@
 # mock-hhs
 
-TCMB ÖHVPS v2.0.0 Hesap Bilgisi Hizmeti şemalarına uyumlu sahte banka (HHS) sunucusu.
+TCMB ÖHVPS v2.0.0 **Hesap Bilgisi Hizmeti** uçlarını taklit eden sahte banka (HHS) sunucusu. Bankalar ve kullanıcılar kurgusaldır.
 
-Kapsam (Faz 1):
-- `POST/GET/DELETE /hesap-bilgisi-rizasi`
-- Sahte banka GKD sayfası (yönlendirmeli) + ayrık GKD simülasyonu
-- `POST /erisim-belirteci`
-- `/hesaplar`, `/bakiye`, `/hesaplar/{hspRef}/islemler`, `/kartlar`, `/kartlar/{kartRef}/kart-detay`, `/kartlar/{kartRef}/kart-hareketleri`
-- Olay bildirimi (`KAYNAK_GUNCELLENDI`, `AYRIK_GKD_BASARILI/BASARISIZ`)
-- Sentetik veri üretici: 3 banka × 3 persona × 12 ay
+## Çalıştırma
 
-Referans: [docs/ohvps-hesap-bilgisi-referans.md](../docs/ohvps-hesap-bilgisi-referans.md)
+```bash
+cd mock-hhs
+python -m venv .venv
+# Windows: .venv\Scripts\activate   |   Mac/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8090
+```
+
+- Swagger: http://localhost:8090/docs
+- Test kullanıcıları ve kodlar: http://localhost:8090/_mock/info
+
+Docker ile:
+
+```bash
+docker build -t fincopilot-mock-hhs .
+docker run -p 8090:8090 -v mockhhs:/data fincopilot-mock-hhs
+```
+
+Testler:
+
+```bash
+pytest
+```
+
+## Durum
+
+| Parça | Durum |
+|---|---|
+| `POST/GET/DELETE /hesap-bilgisi-rizasi` | ✅ |
+| Sahte banka GKD sayfası (yönlendirmeli) | ✅ |
+| `POST /erisim-belirteci` (yet_kod + yenileme_belirteci) | ✅ |
+| Rıza durum makinesi, süre aşımları, iptal kodları 01/03/04/05/08/09/13 | ✅ |
+| Hesap, bakiye, işlem, kart, kart detay, kart hareketleri uçları | ⏳ Faz 1 – adım 2 |
+| Sentetik veri üretici (3 banka × 3 persona × 12 ay) | ⏳ Faz 1 – adım 2 |
+| Ayrık GKD + olay bildirimi | ⏳ Faz 1 – adım 3 |
+
+## Test verisi
+
+| hhsKod | Banka |
+|---|---|
+| 9001 | Anadolu Bank |
+| 9002 | Ege Bank |
+| 9003 | Marmara Bank |
+
+| TCKN | Ad | Şifre |
+|---|---|---|
+| 10000000146 | Ayşe Yılmaz | Test1234 |
+| 10000000214 | Mehmet Kaya | Test1234 |
+| 10000000382 | Zeynep Demir | Test1234 |
+
+YÖS kodu (FinCopilot): `8001` · SMS kodu: `123456`
+
+## Akış
+
+1. YÖS → `POST /hesap-bilgisi-rizasi` (başlıklar: `X-Request-ID`, `X-ASPSP-Code`, `X-TPP-Code`). Yanıt: `rizaNo`, `rizaDrm=B`, `gkd.hhsYonAdr`.
+2. Kullanıcı `hhsYonAdr?drmKod=<YÖS'ün ürettiği değer>` adresine yönlendirilir.
+3. Sahte banka: TCKN + şifre → SMS kodu → hesap/kart seçimi → Onayla.
+4. Banka `yonAdr?rizaNo=...&yetKod=...&drmKod=...` adresine döner (`rizaDrm=Y`).
+   Hata/vazgeçme durumunda: `yonAdr?rizaNo=...&rizaDrm=I&rizaIptDtyKod=..&drmKod=...`
+5. YÖS → `POST /erisim-belirteci` `{rizaNo, rizaTip:"H", yetTip:"yet_kod", yetKod}` → `rizaDrm=K`.
+
+## Spesifikasyondan doğrulanması gerekenler
+
+- Uçların gerçek base path'i (ÖHVPS sürümlü bir ön ek kullanıyor olabilir). Mock şimdilik kökten sunuyor; YÖS tarafında base URL ayardan geliyor.
+- Hata yanıtı gövdesinin alan adları (`errors.py`).
+- GKD geri dönüşündeki parametre adları ve `drmKod`'un taşınma şekli.
+- JWS imzası (`X-JWS-Signature`) mock'ta doğrulanmıyor.

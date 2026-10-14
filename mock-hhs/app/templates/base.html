@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ bank.name }} – Açık Bankacılık Onayı</title>
+  <style>
+    :root { --brand: {{ bank.color }}; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, Segoe UI, Roboto, sans-serif; background: #f2f4f7; color: #1d2530; }
+    header { background: var(--brand); color: #fff; padding: 16px 20px; }
+    header .name { font-weight: 700; font-size: 18px; }
+    header .sub { opacity: .85; font-size: 13px; margin-top: 2px; }
+    .mock { background: #fff3cd; color: #6b5200; font-size: 12px; padding: 6px 20px; }
+    main { max-width: 440px; margin: 20px auto; padding: 0 16px; }
+    .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    h1 { font-size: 18px; margin: 0 0 12px; }
+    p { font-size: 14px; line-height: 1.5; }
+    label { display: block; font-size: 13px; margin: 12px 0 4px; color: #4a5565; }
+    input[type=text], input[type=password] { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #c9d1db; border-radius: 8px; }
+    button { width: 100%; padding: 13px; font-size: 15px; border: 0; border-radius: 8px; margin-top: 16px; cursor: pointer; }
+    .primary { background: var(--brand); color: #fff; }
+    .secondary { background: #e7eaee; color: #1d2530; margin-top: 8px; }
+    .error { background: #fde8e8; color: #9b1c1c; padding: 10px; border-radius: 8px; font-size: 14px; }
+    .hint { font-size: 12px; color: #6b7685; }
+    .item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #eef0f3; }
+    .item:last-child { border-bottom: 0; }
+    .item input { margin-top: 3px; width: 18px; height: 18px; }
+    .item .t { font-weight: 600; font-size: 14px; }
+    .item .s { font-size: 12px; color: #6b7685; }
+    .perm { font-size: 13px; background: #f6f8fa; border-radius: 8px; padding: 10px 12px; }
+    .perm li { margin: 2px 0; }
+    h2 { font-size: 14px; margin: 16px 0 4px; color: #4a5565; }
+  </style>
+</head>
+<body>
+  <header><div class="name">{{ bank.name }}</div><div class="sub">Açık Bankacılık · Güvenli Onay</div></header>
+  <div class="mock">Bu sayfa bitirme projesi için hazırlanmış bir simülasyondur; gerçek bir banka değildir.</div>
+  <main><div class="card">{% block content %}{% endblock %}</div></main>
+</body>
+</html>

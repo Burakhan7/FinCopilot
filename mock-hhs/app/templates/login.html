@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Giriş yapın</h1>
+<p><b>FinCopilot</b> uygulaması hesap bilgilerinize erişmek için onayınızı istiyor. Devam etmek için bankanıza giriş yapın.</p>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<form method="post" action="/gkd/{{ riza.riza_no }}/giris">
+  <input type="hidden" name="sid" value="{{ sid }}">
+  <label for="tckn">T.C. Kimlik No</label>
+  <input id="tckn" name="tckn" type="text" inputmode="numeric" maxlength="11" required autocomplete="off">
+  <label for="sifre">Şifre</label>
+  <input id="sifre" name="sifre" type="password" required>
+  <button class="primary" type="submit">Giriş</button>
+</form>
+<p class="hint">Test kullanıcıları için: GET /_mock/info</p>
+{% endblock %}
