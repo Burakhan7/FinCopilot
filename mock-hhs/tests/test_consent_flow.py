@@ -220,3 +220,13 @@ def run_gkd_any(client, riza_no):
     r = client.post(f"/gkd/{riza_no}/onay", data={"sid": sid, "islem": "onay",
                                                   "hspRef": [v for k, v in refs if k == "hspRef"]})
     return r.headers["location"].replace("http://testserver", "")
+
+
+def test_new_request_cancels_pending_one_with_01(client):
+    first = create(client).json()["rzBlg"]["rizaNo"]
+    second = create(client).json()["rzBlg"]["rizaNo"]
+    rz = client.get(f"/hesap-bilgisi-rizasi/{first}", headers=headers()).json()["rzBlg"]
+    assert rz["rizaDrm"] == "I" and rz["rizaIptDtyKod"] == "01"
+    assert client.get(f"/hesap-bilgisi-rizasi/{second}", headers=headers()).json()["rzBlg"]["rizaDrm"] == "B"
+    # eski isteğin banka sayfası artık açılmaz
+    assert client.get(f"/gkd/{first}").status_code == 400

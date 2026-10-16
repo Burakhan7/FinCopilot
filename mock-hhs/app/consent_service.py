@@ -118,6 +118,14 @@ def create_consent(db: Session, req: HesapBilgisiRizasiIstegi) -> Consent:
         secili_hesaplar=[],
         secili_kartlar=[],
     )
+    # Aynı kullanıcı + HHS + YÖS için onay bekleyen eski istekler yeni talep ile iptal edilir (kod 01).
+    # Böylece banka ekranında aynı istek iki kez görünmez.
+    stale = db.scalars(select(Consent).where(
+        Consent.kmlk_vrs == c.kmlk_vrs, Consent.hhs_kod == c.hhs_kod, Consent.yos_kod == c.yos_kod,
+        Consent.riza_drm == "B")).all()
+    for s in stale:
+        s.riza_drm, s.riza_ipt_dty_kod, s.gncl_zmn = "I", "01", t
+        _notify(db, s)
     db.add(c)
     db.commit()
     return c

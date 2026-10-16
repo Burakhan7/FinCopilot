@@ -153,3 +153,15 @@ def test_undelivered_after_3_attempts(client, monkeypatch):
     r = client.get(f"/olay-abonelik/{sub}/iletilemeyen-olaylar", headers=h())
     assert r.status_code == 200 and any(e["kaynakNo"] == riza for e in r.json())
     client.delete(f"/olay-abonelik/{sub}", headers=h())
+
+
+def test_bank_app_shows_only_latest_request(client):
+    sub = client.post("/olay-abonelik", json={"katilimciBlg": {"hhsKod": HHS, "yosKod": "8001"},
+                                              "abonelikTipleri": ALL_TYPES}, headers=h()).json()["olayAbonelikNo"]
+    first = client.post("/hesap-bilgisi-rizasi", json=ayrik_body(), headers=h()).json()["rzBlg"]["rizaNo"]
+    second = client.post("/hesap-bilgisi-rizasi", json=ayrik_body(), headers=h()).json()["rzBlg"]["rizaNo"]
+    r = client.post("/banka-uygulamasi/giris", data={"hhsKod": HHS, "tckn": ZEYNEP, "sifre": "Test1234"})
+    page = client.get(r.headers["location"]).text
+    assert second in page and first not in page
+    assert page.count('name="rizaNo"') == 1
+    client.delete(f"/olay-abonelik/{sub}", headers=h())
