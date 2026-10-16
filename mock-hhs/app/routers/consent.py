@@ -31,6 +31,7 @@ def _check_owner(c, h):
 @router.post("/hesap-bilgisi-rizasi", status_code=201, response_model=HesapBilgisiRizasi, response_model_exclude_none=True)
 def create(req: HesapBilgisiRizasiIstegi, h=Depends(common_headers), db: Session = Depends(get_db)):
     svc.validate_request(req, h["hhs"], h["yos"])
+    svc.validate_ayrik(db, req)
     c = svc.create_consent(db, req)
     return svc.to_response(c)
 
@@ -39,7 +40,7 @@ def create(req: HesapBilgisiRizasiIstegi, h=Depends(common_headers), db: Session
 def read(rizaNo: str, h=Depends(common_headers), db: Session = Depends(get_db)):
     c = svc.get_consent(db, rizaNo)
     _check_owner(c, h)
-    return svc.to_response(c)
+    return svc.to_response(c, svc.pending_auth_code(db, c))
 
 
 @router.delete("/hesap-bilgisi-rizasi/{rizaNo}", status_code=204)

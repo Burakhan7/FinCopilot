@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ bank.name }} Mobil</h1>
+<p>Bekleyen açık bankacılık onaylarınızı görmek için giriş yapın.</p>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<form method="post" action="/banka-uygulamasi/giris">
+  <label for="hhsKod">Banka</label>
+  <select id="hhsKod" name="hhsKod" style="width:100%;padding:12px;font-size:16px;border:1px solid #c9d1db;border-radius:8px">
+    {% for kod, b in banks.items() %}<option value="{{ kod }}" {% if kod == hhs %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+  </select>
+  <label for="tckn">T.C. Kimlik No</label>
+  <input id="tckn" name="tckn" type="text" inputmode="numeric" maxlength="11" required autocomplete="off">
+  <label for="sifre">Mobil şifre</label>
+  <input id="sifre" name="sifre" type="password" required>
+  <button class="primary" type="submit">Giriş</button>
+</form>
+<p class="hint">Bu sayfa ayrık GKD için bankanın mobil uygulamasını simüle eder.</p>
+{% endblock %}

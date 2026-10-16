@@ -1,21 +1,25 @@
 """FinCopilot Mock HHS — ÖHVPS v2.0.0 Hesap Bilgisi Hizmeti simülasyonu."""
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from . import config
+from . import config, events
 from .db import init_db
 from .errors import OhvpsError, ohvps_error_handler
 from .generator.personas import PERSONAS
-from .routers import consent, data, dev, gkd
+from .routers import bank_app, consent, data, dev, gkd, subscriptions
 from .seed import BANKS
 
 @asynccontextmanager
 async def lifespan(_app):
     init_db()
+    task = asyncio.create_task(events.loop()) if config.EVENT_LOOP_ENABLED else None
     yield
+    if task:
+        task.cancel()
 
 
 app = FastAPI(
@@ -46,6 +50,8 @@ async def validation_handler(request, exc: RequestValidationError):
 app.include_router(consent.router)
 app.include_router(gkd.router)
 app.include_router(data.router)
+app.include_router(subscriptions.router)
+app.include_router(bank_app.router)
 app.include_router(dev.router)
 
 

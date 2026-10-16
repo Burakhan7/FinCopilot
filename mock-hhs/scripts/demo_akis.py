@@ -90,7 +90,14 @@ def main():
         print("❌ 5 dakika içinde onay gelmedi.")
         sys.exit(1)
     if "yetKod" not in cb:
-        print(f"❌ Rıza iptal edildi: rizaIptDtyKod={cb.get('rizaIptDtyKod')}")
+        kod = cb.get("rizaIptDtyKod")
+        aciklama = {
+            "08": f"Bankaya girilen TCKN, rızadaki TCKN ({a.tckn}) ile uyuşmuyor. Sayfada {a.tckn} gir "
+                  f"ya da betiği --tckn <girdiğin TCKN> ile çalıştır.",
+            "09": "Bu kullanıcının bu bankada hesabı/kartı yok. --banka ile başka banka dene (bkz. /_mock/info).",
+            "13": "Bankada 'Vazgeç'e basıldı.",
+        }.get(kod, "bkz. /_mock/callback sayfası")
+        print(f"❌ Rıza iptal edildi (kod {kod}): {aciklama}")
         sys.exit(1)
     if cb.get("drmKod") != drm:
         print("❌ drmKod eşleşmedi (CSRF kontrolü)")

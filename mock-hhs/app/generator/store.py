@@ -7,7 +7,7 @@ bulunursa sadece burası değişir.
 from __future__ import annotations
 
 import hashlib
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal as D
 from functools import lru_cache
 
@@ -27,6 +27,48 @@ def simulate(tckn: str, end: date) -> Simulator:
 
 def dataset(tckn: str) -> Simulator:
     return simulate(tckn, today_tr())
+
+
+class AccountView:
+    """Sentetik hesap + elle eklenen (demo) hareketlerin birleşik görünümü."""
+
+    def __init__(self, state, injected: list):
+        self.meta = state.meta
+        self.kmh_limit = state.kmh_limit
+        if not injected:
+            self.txs = state.txs
+            return
+        txs = [dict(t) for t in state.txs] + injected
+        txs.sort(key=lambda t: t["islGrckZaman"])
+        bal = state.meta["initial"]
+        for tx in txs:
+            bal += tx["islTtr"] if tx["brcAlc"] == "A" else -tx["islTtr"]
+            tx["gnclBky"] = bal
+        self.txs = txs
+
+    def balance_at(self, when: datetime) -> D:
+        last = self.meta["initial"]
+        for tx in self.txs:
+            if tx["islGrckZaman"] > when:
+                break
+            last = tx["gnclBky"]
+        return last
+
+
+def account_view(tckn: str, ref: str, db) -> AccountView:
+    from ..db import InjectedTx
+    state = dataset(tckn).accounts[ref]
+    rows = db.query(InjectedTx).filter(InjectedTx.tckn == tckn, InjectedTx.hsp_ref == ref).all()
+    injected = []
+    for r in rows:
+        z = r.zaman.replace(tzinfo=timezone.utc) if r.zaman.tzinfo is None else r.zaman
+        injected.append({
+            "islNo": f"{z.astimezone(TR_TZ):%Y%m%d}DEMO{r.id:05d}", "refNo": f"DEMO{r.id:06d}", "islTtr": D(r.tutar),
+            "prBrm": state.meta["currency"], "islGrckZaman": z.astimezone(TR_TZ), "kanal": "D", "brcAlc": r.brc_alc,
+            "islTur": r.isl_tur, "islAmc": r.isl_amc, "islAcklm": r.aciklama, "ohkMsj": None,
+            "karsiUnvan": r.karsi_unvan, "karsiIban": None,
+        })
+    return AccountView(state, injected)
 
 
 def amt(x: D) -> str:

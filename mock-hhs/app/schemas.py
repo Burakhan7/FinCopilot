@@ -78,6 +78,7 @@ class GkdYanit(_Base):
     hhsYonAdr: str | None = None
     yetTmmZmn: datetime | None = None
     ayrikGkd: AyrikGkd | None = None
+    yetKod: str | None = None  # mock: ayrık GKD başarılı olunca YÖS yetKod'u rıza sorgusuyla alır
 
 
 class HspBlgYanit(_Base):

@@ -42,6 +42,28 @@ Betik rızayı oluşturur, sahte banka sayfasını tarayıcıda açar, onayı be
 (`/_mock/callback` sayfası uygulamanın yerini tutar), token alır, hesap/bakiye/işlem/kart verisini yazdırır
 ve kuralları (1 ay sınırı, günde 4 sistem sorgusu, rıza iptali) dener.
 
+### Ayrık GKD ve olay bildirimi demosu
+
+```bash
+python scripts/demo_ayrik_olay.py                     # Zeynep · Ege Bank
+```
+
+Betik olay aboneliği açar, ayrık rıza oluşturur ve sahte banka mobil uygulamasını
+(`/banka-uygulamasi`) açar. Kullanıcı orada onaylayınca `AYRIK_GKD_BASARILI` olayı gelir.
+Ardından hesaba havale gelmiş gibi yapar (`BAKIYE` olayı) ve rızayı banka tarafında iptal eder.
+
+Olaylar varsayılan olarak mock içindeki test dinleyicisine gider (`POST /_mock/yos/olay-dinleme`,
+görüntüleme: `GET /_mock/yos/olaylar`). FinCopilot backend'i hazır olunca `MOCK_HHS_YOS_EVENT_URL` ile
+onun `/olay-dinleme` adresine yönlendirilir.
+
+Demo yardımcıları:
+
+| Uç | İşlev |
+|---|---|
+| `POST /_mock/simulasyon/islem` | Şu an gerçekleşmiş gibi hesap hareketi ekler (örn. maaş yattı) |
+| `POST /_mock/simulasyon/riza-iptal/{rizaNo}` | Kullanıcı rızayı banka kanalından iptal etmiş gibi (kod 02) |
+| `POST /_mock/simulasyon/olay-tick` | Olay döngüsünü beklemeden bir tur çalıştırır |
+
 ## Durum
 
 | Parça | Durum |
@@ -53,7 +75,9 @@ ve kuralları (1 ay sınırı, günde 4 sistem sorgusu, rıza iptali) dener.
 | Hesap, bakiye, işlem, kart, kart detay, kart hareketleri uçları | ✅ |
 | İzin kontrolü (01–09), seçili hesap/kart filtresi, PSU-Initiated pencere kuralları, günde 4 sistem sorgusu | ✅ |
 | Sentetik veri üretici (3 persona × 12 ay, BDDK/TCMB parametreleriyle) | ✅ |
-| Ayrık GKD + olay bildirimi | ⏳ Faz 1 – adım 3 |
+| Ayrık GKD (sahte banka mobil uygulaması: `/banka-uygulamasi`) | ✅ |
+| Olay abonelik servisleri (`/olay-abonelik`, iletilemeyen olaylar) | ✅ |
+| Olay iletimi: AYRIK_GKD_BASARILI/BASARISIZ, KAYNAK_GUNCELLENDI (BAKIYE, HESAP_BILGISI_RIZASI), 3 deneme | ✅ |
 
 ## Sentetik veri
 
@@ -103,3 +127,4 @@ YÖS kodu (FinCopilot): `8001` · SMS kodu: `123456`
 - Hata yanıtı gövdesinin alan adları (`errors.py`).
 - GKD geri dönüşündeki parametre adları ve `drmKod`'un taşınma şekli.
 - JWS imzası (`X-JWS-Signature`) mock'ta doğrulanmıyor.
+- Olay gövdesinin alan adları (`app/events.py → payload`) ve ayrık GKD'de YÖS'ün `yetKod`'u nasıl aldığı (mock: rıza sorgusunda `gkd.yetKod`).

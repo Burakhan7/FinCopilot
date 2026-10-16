@@ -44,12 +44,13 @@ class Ctx:
 
     def accounts(self):
         sim = self.sim()
-        return [sim.accounts[r] for r in self.c.secili_hesaplar if r in sim.accounts]
+        return [store.account_view(self.c.kmlk_vrs, r, self.db) for r in self.c.secili_hesaplar if r in sim.accounts]
 
     def account(self, ref: str):
         if ref not in self.c.secili_hesaplar:
             raise errors.resource_not_found()
-        return self.sim().accounts[ref]
+        self.sim()
+        return store.account_view(self.c.kmlk_vrs, ref, self.db)
 
     def card_metas(self):
         by_ref = {c["ref"]: c for c in self.persona["cards"]} if self.persona else {}

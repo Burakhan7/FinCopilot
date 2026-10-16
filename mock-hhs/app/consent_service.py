@@ -143,6 +143,7 @@ def apply_timeouts(db: Session, c: Consent) -> None:
         c.riza_drm, changed = "S", True
     if changed:
         c.gncl_zmn = t
+        _notify(db, c)
         db.commit()
 
 
@@ -150,10 +151,43 @@ def cancel(db: Session, c: Consent, kod: str) -> None:
     c.riza_drm = "I"
     c.riza_ipt_dty_kod = kod
     c.gncl_zmn = now()
+    _notify(db, c)
     db.commit()
 
 
-def to_response(c: Consent) -> HesapBilgisiRizasi:
+def _notify(db: Session, c: Consent) -> None:
+    """Rıza durum değişikliğinde YÖS'e olay (abonelik varsa).
+
+    - Ayrık GKD sırasında iptal/süre aşımı → AYRIK_GKD_BASARISIZ
+    - YÖS dışından gelen değişiklikler (01, 02, 04, 05, S) → KAYNAK_GUNCELLENDI / HESAP_BILGISI_RIZASI
+    - YÖS'ün kendi iptali (03) için olay üretilmez.
+    """
+    from . import events
+    if c.yet_yntm == "A" and c.riza_drm == "I" and c.riza_ipt_dty_kod in ("04", "07", "08", "09", "10", "11", "12", "13", "14", "99"):
+        events.emit(db, c, "AYRIK_GKD_BASARISIZ", "HESAP_BILGISI_RIZASI", c.riza_no)
+    elif c.riza_drm == "S" or c.riza_ipt_dty_kod in ("01", "02", "04", "05"):
+        events.emit(db, c, "KAYNAK_GUNCELLENDI", "HESAP_BILGISI_RIZASI", c.riza_no)
+
+
+def validate_ayrik(db: Session, req: HesapBilgisiRizasiIstegi) -> None:
+    """Ayrık GKD ön koşulu: YÖS, AYRIK_GKD_BASARILI ve AYRIK_GKD_BASARISIZ olaylarına abone olmalı."""
+    if req.gkd.yetYntm != "A":
+        return
+    from . import events
+    for olay in ("AYRIK_GKD_BASARILI", "AYRIK_GKD_BASARISIZ"):
+        if events.subscription_for(db, req.katilimciBlg.hhsKod, req.katilimciBlg.yosKod, olay,
+                                   "HESAP_BILGISI_RIZASI") is None:
+            raise errors.invalid_field(f"Ayrık GKD için {olay} olayına abonelik gerekli (/olay-abonelik).")
+
+
+def pending_auth_code(db: Session, c: Consent) -> str | None:
+    if c.riza_drm != "Y":
+        return None
+    code = db.scalars(select(AuthCode).where(AuthCode.riza_no == c.riza_no, AuthCode.used.is_(False))).first()
+    return code.yet_kod if code else None
+
+
+def to_response(c: Consent, yet_kod: str | None = None) -> HesapBilgisiRizasi:
     hhs_yon_adr = f"{config.PUBLIC_BASE_URL}/gkd/{c.riza_no}" if c.yet_yntm == "Y" else None
     return HesapBilgisiRizasi(
         rzBlg=RzBlg(
@@ -171,6 +205,7 @@ def to_response(c: Consent) -> HesapBilgisiRizasi:
             hhsYonAdr=hhs_yon_adr,
             yetTmmZmn=tr(c.yet_tmm_zmn),
             ayrikGkd=c.ayrik_gkd,
+            yetKod=yet_kod if c.yet_yntm == "A" else None,
         ),
         hspBlg=HspBlgYanit(
             iznBlg=IznBlg(
@@ -198,6 +233,7 @@ def authorize(db: Session, c: Consent, hesaplar: list[str], kartlar: list[str]) 
     ).all()
     for p in previous:
         p.riza_drm, p.riza_ipt_dty_kod, p.gncl_zmn = "I", "01", t
+        _notify(db, p)
 
     c.riza_drm = "Y"
     c.yet_tmm_zmn = t
@@ -206,6 +242,9 @@ def authorize(db: Session, c: Consent, hesaplar: list[str], kartlar: list[str]) 
     c.secili_kartlar = kartlar
     code = AuthCode(yet_kod=secrets.token_urlsafe(24), riza_no=c.riza_no, expires_at=t + config.YETKOD_TIMEOUT)
     db.add(code)
+    if c.yet_yntm == "A":
+        from . import events
+        events.emit(db, c, "AYRIK_GKD_BASARILI", "HESAP_BILGISI_RIZASI", c.riza_no)
     db.commit()
     return code.yet_kod
 

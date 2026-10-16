@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% set labels = {
+  "01": "Temel hesap bilgisi", "02": "Ayrıntılı hesap bilgisi", "03": "Bakiye bilgisi",
+  "04": "Temel işlem bilgisi", "05": "Ayrıntılı işlem bilgisi", "06": "Anlık bakiye bildirimi",
+  "07": "Temel kart bilgisi", "08": "Detaylı kart bilgisi", "09": "Ayrıntılı kart işlem bilgisi"} %}
+{% set msgs = {"onaylandi": "Onay verildi. FinCopilot'a bildirildi.", "reddedildi": "İstek reddedildi.",
+  "secim-yok": "En az bir hesap veya kart seçmelisiniz.", "istek-gecersiz": "İstek artık geçerli değil."} %}
+{% block content %}
+<h1>🔔 Onay bekleyen istekler</h1>
+<p>Merhaba {{ user.name }}.</p>
+{% if msg %}<div class="{{ 'error' if msg in ('secim-yok','istek-gecersiz') else 'perm' }}">{{ msgs.get(msg, msg) }}</div>{% endif %}
+{% if not items %}
+  <p>Bekleyen istek yok. FinCopilot'tan yeni bir bağlantı başlatınca burada görünür.</p>
+  <form method="get"><input type="hidden" name="sid" value="{{ sid }}"><button class="secondary" type="submit">Yenile</button></form>
+{% endif %}
+{% for it in items %}
+<form method="post" action="/banka-uygulamasi/onay" style="border-top:1px solid #eef0f3;margin-top:12px;padding-top:12px">
+  <input type="hidden" name="sid" value="{{ sid }}">
+  <input type="hidden" name="rizaNo" value="{{ it.riza.riza_no }}">
+  <p><b>FinCopilot</b> hesap bilgilerinize <b>{{ it.riza.erisim_izni_son_trh.strftime("%d.%m.%Y") }}</b> tarihine kadar erişmek istiyor.</p>
+  <div class="perm"><ul style="margin:0;padding-left:18px">{% for i in it.riza.izin_tur %}<li>{{ labels.get(i, i) }}</li>{% endfor %}</ul></div>
+  {% if it.accounts %}<h2>Hesaplar</h2>{% for a in it.accounts %}
+    <label class="item"><input type="checkbox" name="hspRef" value="{{ a.hspRef }}" checked>
+    <span><span class="t">{{ a.hspUrunAdi }} ({{ a.prBrm }})</span><br><span class="s">{{ a.hspNo[:4] }} **** {{ a.hspNo[-4:] }}</span></span></label>{% endfor %}{% endif %}
+  {% if it.cards %}<h2>Kartlar</h2>{% for k in it.cards %}
+    <label class="item"><input type="checkbox" name="kartRef" value="{{ k.kartRef }}" checked>
+    <span><span class="t">{{ k.kartUrunAdi }}</span><br><span class="s">**** {{ k.kartSonNo }}</span></span></label>{% endfor %}{% endif %}
+  <button class="primary" type="submit" name="islem" value="onay">Onayla</button>
+  <button class="secondary" type="submit" name="islem" value="reddet">Reddet</button>
+</form>
+{% endfor %}
+{% endblock %}

@@ -7,6 +7,7 @@ from urllib.parse import parse_qs, urlparse
 
 _db = os.path.join(tempfile.mkdtemp(), "test.db")
 os.environ["MOCK_HHS_DATABASE_URL"] = f"sqlite:///{_db}"
+os.environ["MOCK_HHS_EVENT_LOOP"] = "0"  # testlerde olay döngüsünü elle çalıştırıyoruz
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
