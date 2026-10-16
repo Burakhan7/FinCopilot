@@ -197,3 +197,25 @@ def test_other_bank_cannot_read_consent(client):
     riza_no = create(client).json()["rzBlg"]["rizaNo"]
     r = client.get(f"/hesap-bilgisi-rizasi/{riza_no}", headers=headers(hhs="9002"))
     assert r.status_code == 400
+
+
+def test_dev_callback_page_stores_result(client):
+    body = consent_body()
+    body["gkd"]["yonAdr"] = "http://testserver/_mock/callback"
+    riza = create(client, body).json()["rzBlg"]["rizaNo"]
+    assert client.get(f"/_mock/callback/{riza}").status_code == 404
+    q = run_gkd_any(client, riza)
+    r = client.get(q)
+    assert r.status_code == 200 and "Onay alındı" in r.text
+    assert "yetKod" in client.get(f"/_mock/callback/{riza}").json()
+
+
+def run_gkd_any(client, riza_no):
+    r = client.get(f"/gkd/{riza_no}", params={"drmKod": "d"})
+    sid = re.search(r'name="sid" value="([^"]+)"', r.text).group(1)
+    client.post(f"/gkd/{riza_no}/giris", data={"sid": sid, "tckn": TCKN, "sifre": "Test1234"})
+    r = client.post(f"/gkd/{riza_no}/otp", data={"sid": sid, "otp": "123456"})
+    refs = re.findall(r'name="(hspRef|kartRef)" value="([^"]+)"', r.text)
+    r = client.post(f"/gkd/{riza_no}/onay", data={"sid": sid, "islem": "onay",
+                                                  "hspRef": [v for k, v in refs if k == "hspRef"]})
+    return r.headers["location"].replace("http://testserver", "")

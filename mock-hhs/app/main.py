@@ -9,7 +9,7 @@ from . import config
 from .db import init_db
 from .errors import OhvpsError, ohvps_error_handler
 from .generator.personas import PERSONAS
-from .routers import consent, data, gkd
+from .routers import consent, data, dev, gkd
 from .seed import BANKS
 
 @asynccontextmanager
@@ -46,6 +46,7 @@ async def validation_handler(request, exc: RequestValidationError):
 app.include_router(consent.router)
 app.include_router(gkd.router)
 app.include_router(data.router)
+app.include_router(dev.router)
 
 
 @app.get("/_mock/health", tags=["Mock yardımcı"])

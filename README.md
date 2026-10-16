@@ -24,6 +24,8 @@ Kullanıcının farklı bankalardaki hesap ve kart verilerini Açık Bankacılı
 
 ## Dokümanlar
 
+- [Sistem mimarisi](docs/mimari.md)
+- [Veritabanı şeması](docs/veritabani.md)
 - [ÖHVPS Hesap Bilgisi referansı](docs/ohvps-hesap-bilgisi-referans.md)
 - [Backend fonksiyon listesi](docs/backend-fonksiyon-listesi.md)
 - [Fonksiyon / veri kaynağı / sorun tablosu (PDF)](docs/fincopilot-fonksiyon-tablosu.pdf)

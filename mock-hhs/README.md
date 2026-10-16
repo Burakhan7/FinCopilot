@@ -28,6 +28,20 @@ Testler:
 pytest
 ```
 
+## Uçtan uca demo
+
+Sunucu çalışırken ikinci bir terminalde:
+
+```bash
+python scripts/demo_akis.py                                # Mehmet · Anadolu Bank
+python scripts/demo_akis.py --tckn 10000000146             # Ayşe · Anadolu Bank
+python scripts/demo_akis.py --tckn 10000000382 --banka 9002  # Zeynep · Ege Bank
+```
+
+Betik rızayı oluşturur, sahte banka sayfasını tarayıcıda açar, onayı bekler
+(`/_mock/callback` sayfası uygulamanın yerini tutar), token alır, hesap/bakiye/işlem/kart verisini yazdırır
+ve kuralları (1 ay sınırı, günde 4 sistem sorgusu, rıza iptali) dener.
+
 ## Durum
 
 | Parça | Durum |

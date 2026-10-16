@@ -5,15 +5,26 @@ Varsayımlar: Ekim 2026 – Haziran 2027, bitirme teslimi Haziran 2027. Güz dö
 ## Teknoloji önerisi
 | Katman | Teknoloji |
 |---|---|
-| Mobil | Flutter |
+| Mobil | Flutter + Riverpod |
 | Ana API | .NET 8, Clean Architecture, CQRS/MediatR, EF Core |
 | Veri / AI servisi | Python FastAPI (kategorizasyon, tahmin, LLM orkestrasyonu) |
 | Mock HHS | FastAPI (ÖHVPS v2.0.0 şemalarına birebir) |
-| Veritabanı | PostgreSQL ya da MSSQL |
+| Veritabanı | Microsoft SQL Server 2022 |
 | Arka plan işleri | Hangfire (.NET) |
 | Bildirim | Firebase FCM |
 | LLM | Gemini (function calling) + Ollama yerel model (karşılaştırma için) |
 | Dağıtım | Docker Compose, Hetzner VPS, GitHub Actions |
+
+## Alınan kararlar
+| Konu | Karar | Tarih |
+|---|---|---|
+| Veritabanı | Microsoft SQL Server 2022 | 14.10.2026 |
+| Mock HHS | Python FastAPI | 14.10.2026 |
+| Arka plan işleri | Hangfire (SQL Server deposu) | 14.10.2026 |
+| Ana LLM | Gemini (karşılaştırma için yerel model Ollama) | 14.10.2026 |
+| Flutter state management | Riverpod | 14.10.2026 |
+
+Not: Teknoloji ve mimari kararları Burakhan verir; yeni bir karar gerektiğinde seçenekler sunulur.
 
 ## Fazlar
 | Faz | Tarih | Odak | Çıktı / Kilometre taşı |
