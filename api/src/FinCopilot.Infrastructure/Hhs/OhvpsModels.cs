@@ -37,3 +37,48 @@ internal sealed record ErisimBelirteciYaniti(
     int YenilemeBelirteciGecerlilikSuresi);
 
 internal sealed record OhvpsHata(int? HttpCode, string? ErrorCode, string? MoreInformationTr);
+
+// ---- Veri uçları. Tutarlar ÖHVPS'te string ("1234.50"); serileştirici string'den decimal okur.
+
+internal sealed record HspTml(
+    string HspRef, string? HspNo, string? HspShb, string? SubeAdi, string? KisaAd, string PrBrm,
+    string? HspTur, string? HspTip, string? HspUrunAdi, string? HspDrm);
+
+internal sealed record HspDty(DateTimeOffset? HspAclsTrh);
+
+internal sealed record Hesap(HspTml HspTml, HspDty? HspDty);
+
+internal sealed record Bky(decimal BkyTtr, decimal? BlkTtr, string PrBrm, DateTimeOffset BkyZmn);
+
+internal sealed record KrdHsp(decimal? KulKrdTtr, string? KrdDhlGstr);
+
+internal sealed record Bakiye(string HspRef, Bky Bky, KrdHsp? KrdHsp);
+
+internal sealed record IslTml(
+    string IslNo, string? RefNo, decimal IslTtr, string PrBrm, DateTimeOffset IslGrckZaman, string? Kanal,
+    string BrcAlc, string? IslTur, string? IslAmc, string? IslAcklm, string? OhkMsj);
+
+/// <summary>05 (ayrıntılı işlem) izniyle gelen karşı taraf bilgisi.</summary>
+internal sealed record IslDty(string? OdmKsnm, string? OdmHsbNo);
+
+internal sealed record Islem(IslTml IslTml, IslDty? IslDty);
+
+/// <summary>Mock HHS'deki dizi adı "isller".</summary>
+internal sealed record IslemSayfasi(string HspRef, IReadOnlyList<Islem> Isller);
+
+internal sealed record Kart(
+    string KartRef, string? KartSonNo, string KartTipi, string? AltKartTipi, string? KartFormu,
+    string? KartTuru, string? KartStatu, string? KartSema, string? KartUrunAdi);
+
+internal sealed record KartDetay(
+    string KartRef, DateTimeOffset? HesapKesimTarihi, DateTimeOffset? SonOdemeTarihi, decimal DonemBorcu,
+    decimal AsgariOdeme, decimal? LimitTutari, decimal? KullanilanLimit, string PrBrm);
+
+internal sealed record DovizBilgisi(decimal OrijinalTutar, string OrijinalParaBirimi, decimal Kur);
+
+internal sealed record KartHareketi(
+    string IslemNo, DateTimeOffset IslemTarihi, decimal IslemTutari, string IslemParaBirimi, string BrcAlc,
+    string? IslemTuru, string? IslemAciklama, string? UyeIsyeri, string? ReferansNo, int? TaksitSayisi,
+    DovizBilgisi? DovizBilgisi);
+
+internal sealed record KartHareketiSayfasi(string KartRef, IReadOnlyList<KartHareketi> KartHareketleri);

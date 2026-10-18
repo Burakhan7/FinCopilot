@@ -87,6 +87,14 @@ public sealed class FakeHhsClient : IHhsClient
         return Task.FromResult(new HhsToken(s.AccessToken, TimeSpan.FromDays(1), s.RefreshToken, TimeSpan.FromDays(180)));
     }
 
+    // Veri uçları senkronizasyon testleriyle (Faz 2, 5. adım) doldurulacak.
+    public Task<IReadOnlyList<HhsAccount>> GetAccountsAsync(HhsAccess access, CancellationToken ct) => throw new NotSupportedException();
+    public Task<IReadOnlyList<HhsBalance>> GetBalancesAsync(HhsAccess access, CancellationToken ct) => throw new NotSupportedException();
+    public Task<HhsPage<HhsTransaction>> GetTransactionsAsync(HhsAccess access, string hspRef, HhsWindow window, int page, int pageSize, CancellationToken ct) => throw new NotSupportedException();
+    public Task<IReadOnlyList<HhsCard>> GetCardsAsync(HhsAccess access, CancellationToken ct) => throw new NotSupportedException();
+    public Task<HhsCardDetail> GetCardDetailAsync(HhsAccess access, string kartRef, CancellationToken ct) => throw new NotSupportedException();
+    public Task<HhsPage<HhsCardTransaction>> GetCardTransactionsAsync(HhsAccess access, string kartRef, HhsWindow window, int page, int pageSize, CancellationToken ct) => throw new NotSupportedException();
+
     private HhsConsent Map(string rizaNo)
     {
         var s = Consents[rizaNo];

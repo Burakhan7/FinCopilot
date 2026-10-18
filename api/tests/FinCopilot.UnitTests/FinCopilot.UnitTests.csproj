@@ -15,6 +15,11 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- Gerçek Mock HHS yanıtları (sözleşme fixture'ları) -->
+  <ItemGroup>
+    <None Include="Hhs\Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\FinCopilot.Application\FinCopilot.Application.csproj" />
     <ProjectReference Include="..\..\src\FinCopilot.Infrastructure\FinCopilot.Infrastructure.csproj" />

@@ -58,7 +58,7 @@ mobile/      Flutter (Faz 2 sonu – boş)
 1. ✅ Solution iskeleti (Domain/Application/Infrastructure/Api/Worker), SQL Server, ilk migration — 13 birim + 7 integration testi
 2. ✅ Kullanıcı kaydı/giriş (`/auth/*`, `/me`) — toplam 36 birim + 22 integration testi
 3. ✅ Rıza modülü (`/banks`, `/me/tckn`, `/consents/*`): drmKod, durum makinesi (Domain), token şifreleme, HHS'den durum tazeleme — toplam 66 birim + 40 integration; gerçek Mock HHS ile elle uçtan uca denendi
-4. `IHhsClient` adapter (MockHhsClient): rıza/token uçları hazır; veri uçları (hesaplar, bakiye, işlemler, kartlar…) eklenecek
+4. ✅ `IHhsClient` adapter (MockHhsClient): rıza/token + 6 veri ucu (hesaplar, bakiye, işlemler, kartlar, kart-detay, kart-hareketleri), PSU-Initiated, sayfalama (`HhsPage`), kota hatası (`IsRateExceeded`). Sözleşme testleri gerçek Mock HHS yanıtlarından alınmış fixture'larla (`tests/FinCopilot.UnitTests/Hhs/Fixtures/`) — toplam 75 birim + 40 integration. `FakeHhsClient` veri uçları 5. adımda doldurulacak
 5. Senkronizasyon: ilk 12 ay yükleme, Hangfire ile günde ≤4 sorgu, `POST /olay-dinleme`. Ayrıca: rıza K olunca olay aboneliği + initial_backfill tetikleme, ayrık GKD, süre dolumu işi (check_consent_expiry)
 6. Uçtan uca test (Mock HHS + backend)
 

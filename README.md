@@ -40,7 +40,9 @@ Faz 0 – Hazırlık (Ekim 2026). Ayrıntılar için [yol planı](docs/yol-plani
 Spesifikasyondan henüz doğrulanamayan ve varsayımla ilerlenen noktalar:
 
 - **HHS-YÖS API (banka listesi):** Gerçek ortamda `banks` tablosu bu API'den dolacak. Uç adı ve alan adları incelenmedi; şimdilik liste `appsettings` → `Hhs:Banks`'ten geliyor (`api/src/FinCopilot.Infrastructure/Hhs/BankCatalog.cs`).
-- **Kart detay (08) ve kart hareketleri (09) alan adları:** bkz. [ÖHVPS referansı](docs/ohvps-hesap-bilgisi-referans.md) §8.
+- **Kart detay (08) ve kart hareketleri (09) alan adları:** bkz. [ÖHVPS referansı](docs/ohvps-hesap-bilgisi-referans.md) §8. Backend Mock HHS'nin kullandığı adlara göre yazıldı (`hesapKesimTarihi`, `donemBorcu`, `limitTutari`, `islemTutari`, `taksitSayisi`, `dovizBilgisi`…; `api/src/FinCopilot.Infrastructure/Hhs/OhvpsModels.cs`). Nakit limit alanları mock'ta yok.
+- **İşlem listesi dizi adı:** Mock HHS `isller` kullanıyor (`{"hspRef", "isller": [...]}`); spesifikasyondaki adla karşılaştırılmalı.
+- **Sayfalama başlıkları:** `X-Total-Count` / `X-Total-Pages` mock varsayımı; sistem tetikli sorguda her sayfanın kotadan düşüp düşmediği spesifikasyondan doğrulanmalı (mock'ta düşüyor).
 - **Hata yanıtı gövdesi:** Mock HHS `errorCode` / `moreInformationTr` kullanıyor; spesifikasyondaki hata nesnesiyle karşılaştırılmalı (`mock-hhs/app/errors.py`).
 - **v2.0.1 farkları:** Sitede v2.0.1 yayınlanmış; v2.0.0 ile farkları kontrol edilmeli.
 
