@@ -3,6 +3,7 @@ using FinCopilot.Application;
 using FinCopilot.Application.Auth;
 using FinCopilot.Infrastructure;
 using FinCopilot.Infrastructure.Auth;
+using FinCopilot.Infrastructure.Hhs;
 using FinCopilot.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,10 +21,13 @@ builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
 builder.Services.AddExceptionHandler<AppProblemExceptionHandler>();
+builder.Services.AddExceptionHandler<HhsExceptionHandler>();
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>("database");
 
 var app = builder.Build();
+
+await BankCatalog.SyncAsync(app.Services);
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();

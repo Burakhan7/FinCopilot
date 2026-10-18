@@ -10,7 +10,8 @@ Bitirme projesi (Manisa Celal Bayar Üniv., teslim Haziran 2027). Geliştirici: 
 - **Teknoloji/mimari kararlarını kendin verme.** Seçenekleri (kısa artı/eksi + önerin) sun, Burakhan karar versin.
 - Yanıtlar Türkçe, kısa ve doğrudan. Komutlar kopyala-yapıştır hazır (Windows cmd/PowerShell öncelikli).
 - Her adım sonunda testleri çalıştır; geçmeden "bitti" deme.
-- Spesifikasyondan doğrulanamayan şeyleri uydurma; README'deki "doğrulanması gerekenler" listesine ekle.
+- Spesifikasyondan doğrulanamayan şeyleri uydurma; README'deki "Doğrulanması gerekenler" listesine ekle.
+- Dev DB'de elle SQL: `docker exec fincopilot-sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "FinCopilot_Dev_2026!" -C -I -d FinCopilot -Q "..."` (`-I` şart: filtered index'ler QUOTED_IDENTIFIER ister).
 - Commit mesajları Türkçe, kısa.
 
 ## Alınan kararlar
@@ -29,6 +30,7 @@ Bitirme projesi (Manisa Celal Bayar Üniv., teslim Haziran 2027). Geliştirici: 
 | Mapping | Elle (kütüphane yok) |
 | Doğrulama | FluentValidation, MediatR `ValidationBehavior` ile |
 | Test | xUnit + Testcontainers (gerçek SQL Server 2022; Docker Desktop açık olmalı) |
+| Rıza modülü | TCKN ilk banka bağlamada (`PUT /me/tckn`), arama özeti HMAC-SHA256 (`Security__TcknHashKey`). Banka listesi `Hhs:Banks` config → açılışta `banks`'e upsert. HHS HTTP: Microsoft.Extensions.Http.Resilience (retry sadece GET). İzinler 01–09 hepsi, süre 180 gün, geçmiş 365 gün. Ayrık GKD 5. adımda |
 | Geliştirme DB | Docker'da SQL Server 2022 (`docker-compose.yml`, sa şifresi `FinCopilot_Dev_2026!`) |
 
 ## Repo
@@ -55,16 +57,15 @@ mobile/      Flutter (Faz 2 sonu – boş)
 ## Sıradaki: Faz 2 – .NET backend
 1. ✅ Solution iskeleti (Domain/Application/Infrastructure/Api/Worker), SQL Server, ilk migration — 13 birim + 7 integration testi
 2. ✅ Kullanıcı kaydı/giriş (`/auth/*`, `/me`) — toplam 36 birim + 22 integration testi
-3. Rıza modülü (banka bağla, TCKN alma, drmKod, durum takibi, token şifreleme)
-4. `IHhsClient` adapter (MockHhsClient)
-5. Senkronizasyon: ilk 12 ay yükleme, Hangfire ile günde ≤4 sorgu, `POST /olay-dinleme`
+3. ✅ Rıza modülü (`/banks`, `/me/tckn`, `/consents/*`): drmKod, durum makinesi (Domain), token şifreleme, HHS'den durum tazeleme — toplam 66 birim + 40 integration; gerçek Mock HHS ile elle uçtan uca denendi
+4. `IHhsClient` adapter (MockHhsClient): rıza/token uçları hazır; veri uçları (hesaplar, bakiye, işlemler, kartlar…) eklenecek
+5. Senkronizasyon: ilk 12 ay yükleme, Hangfire ile günde ≤4 sorgu, `POST /olay-dinleme`. Ayrıca: rıza K olunca olay aboneliği + initial_backfill tetikleme, ayrık GKD, süre dolumu işi (check_consent_expiry)
 6. Uçtan uca test (Mock HHS + backend)
 
 **Backend'i çalıştırma:** bkz. [api/README.md](api/README.md) (`docker compose up -d sqlserver` → `dotnet ef database update` → Api `http://localhost:8080`).
 
 **Açık konular (sonra sorulacak):**
 - Data Protection anahtarları DB'de düz XML; üretimde anahtarların sertifika/ortam anahtarıyla ayrıca şifrelenmesi (`ProtectKeysWith...`).
-- `tckn_hash` için HMAC anahtarının nerede tutulacağı (3. adımda, TCKN banka bağlamada alınıyor).
 - Gerçek SMS sağlayıcısı (şimdilik `LoggingSmsSender` sadece loga yazar).
 - Access token iptali: logout sadece refresh'i kapatır, access token en fazla 15 dk daha geçerli kalır.
 

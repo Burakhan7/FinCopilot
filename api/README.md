@@ -36,7 +36,23 @@ dotnet run --project api/src/FinCopilot.Worker
 
 Hatalar ProblemDetails; istemci `code` alanına göre dallanır (`otp_invalid`, `otp_cooldown`, `otp_rate_limited`, `phone_already_registered`, `invalid_credentials`, `account_locked`, `device_verification_required`, `invalid_refresh_token`).
 
-Üretimde zorunlu: `Jwt__SigningKey` (≥32 bayt) ortam değişkeni. `Auth:OtpFixedCode` Development/Testing dışında verilirse Api açılmaz.
+## Banka bağlama uçları (JWT)
+| Uç | Açıklama |
+|---|---|
+| `GET /banks` | Bağlanabilir bankalar (`Hhs:Banks` yapılandırmasından) |
+| `PUT /me/tckn` `{tckn}` | Bir kez; checksum kontrolü, şifreli saklama, HMAC ile tekillik |
+| `POST /consents` `{hhsKod}` | HHS'de rıza açar → `201 {consentId, gkdUrl}`. Mobil `gkdUrl`'yi açar (tek kullanımlık `drmKod` içinde) |
+| `POST /consents/{id}/callback` | `{rizaNo, drmKod, yetKod?}`: bankanın deep link ile döndürdüğü parametreler. yetKod → token → durum `K` |
+| `GET /consents` | Bağlantılar (yerel veri) |
+| `GET /consents/{id}` | Tek bağlantı; aktifse durum HHS'den tazelenir (bankadan iptal, süre aşımı) |
+| `DELETE /consents/{id}` | HHS'de iptal (kod 03), token'lar silinir, hesap/kartlar pasifleşir |
+
+Hata kodları: `tckn_already_set`, `tckn_in_use`, `tckn_required`, `bank_not_found`, `consent_already_active`, `consent_not_found`, `consent_not_pending`, `drm_kod_invalid`, `consent_not_active`, `bank_error` (502, `bankErrorCode` = ÖHVPS hata kodu).
+
+Mobil olmadan denemek için: `$env:Hhs__RedirectUri="http://localhost:8090/_mock/callback"` ile Api'yi başlat; banka dönüşü Mock HHS'nin test sayfasına düşer, parametreler `GET /_mock/callback/{rizaNo}` ile okunur.
+
+## Yapılandırma
+Üretimde zorunlu ortam değişkenleri: `Jwt__SigningKey`, `Security__TcknHashKey` (ikisi de ≥32 bayt). `Auth:OtpFixedCode` Development/Testing dışında verilirse Api açılmaz. Banka listesi ve YÖS kodu: `Hhs` bölümü (bkz. `appsettings.Development.json`).
 
 ## Test
 ```

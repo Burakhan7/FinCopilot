@@ -11,6 +11,57 @@ public static class RizaDurumu
 
     /// <summary>Bir kullanıcının bir bankada aynı anda tek rızası bu durumlarda olabilir.</summary>
     public static readonly IReadOnlyList<string> Aktif = [YetkiBekleniyor, Yetkilendirildi, YetkiKullanildi];
+
+    public static bool IsTerminal(string drm) => drm is YetkiSonlandirildi or YetkiIptal;
+
+    /// <summary>
+    /// İzinli geçişler: B → Y/K/I, Y → K/I, K → S/I. S ve I son durumdur.
+    /// (B → K: yönlendirmeli akışta Y'yi yerelde görmeden token alınır.)
+    /// </summary>
+    public static bool CanTransition(string from, string to) => (from, to) switch
+    {
+        (YetkiBekleniyor, Yetkilendirildi or YetkiKullanildi or YetkiIptal) => true,
+        (Yetkilendirildi, YetkiKullanildi or YetkiIptal) => true,
+        (YetkiKullanildi, YetkiSonlandirildi or YetkiIptal) => true,
+        _ => false,
+    };
+
+    public static string Aciklama(string drm) => drm switch
+    {
+        YetkiBekleniyor => "Banka onayı bekleniyor",
+        Yetkilendirildi => "Bankada onaylandı",
+        YetkiKullanildi => "Bağlı",
+        YetkiSonlandirildi => "Süresi doldu",
+        YetkiIptal => "İptal edildi",
+        _ => drm,
+    };
+}
+
+/// <summary>ÖHVPS rizaIptDtyKod değerleri (bkz. docs/ohvps-hesap-bilgisi-referans.md §4).</summary>
+public static class RizaIptalKodu
+{
+    public const string YeniRiza = "01";
+    public const string KullaniciHhsUzerinden = "02";
+    public const string KullaniciYosUzerinden = "03";
+
+    public static string Aciklama(string? kod) => kod switch
+    {
+        null => "",
+        "01" => "Yeni rıza talebi ile iptal",
+        "02" => "Banka üzerinden iptal edildi",
+        "03" => "Uygulama üzerinden iptal edildi",
+        "04" or "05" or "06" => "Süre aşımı",
+        "07" => "Mükerrer çağrı",
+        "08" => "Bankaya girilen TCKN uyuşmadı",
+        "09" => "Bankada uygun hesap/kart yok",
+        "10" => "Banka kanalı kapalı",
+        "11" => "Hesap yetki sorunu",
+        "12" => "Banka kontrolleri aşılamadı",
+        "13" => "Bankada vazgeçildi",
+        "14" => "Güvenlik şüphesi",
+        "15" => "Rıza güncellendi",
+        _ => "Diğer",
+    };
 }
 
 public class Bank
@@ -44,6 +95,28 @@ public class Consent
     public DateTimeOffset UpdatedAt { get; set; }
 
     public ConsentToken? Token { get; set; }
+
+    public bool IsActive => !RizaDurumu.IsTerminal(RizaDrm);
+
+    /// <summary>
+    /// Durumu değiştirir. Aynı duruma geçiş yok sayılır; izinsiz geçiş hata fırlatır
+    /// (HHS'den gelen beklenmedik bir durum sessizce yazılmasın).
+    /// </summary>
+    /// <returns>Durum değiştiyse true.</returns>
+    public bool TransitionTo(string drm, string? iptalKodu, DateTimeOffset now)
+    {
+        if (drm == RizaDrm)
+            return false;
+        if (!RizaDurumu.CanTransition(RizaDrm, drm))
+            throw new InvalidOperationException($"Rıza durumu {RizaDrm} → {drm} geçişi geçersiz.");
+
+        RizaDrm = drm;
+        RizaIptDtyKod = drm == RizaDurumu.YetkiIptal ? iptalKodu : null;
+        UpdatedAt = now;
+        if (RizaDurumu.IsTerminal(drm))
+            DrmKodHash = null;
+        return true;
+    }
 }
 
 public class ConsentToken

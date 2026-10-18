@@ -207,7 +207,7 @@ erDiagram
 ### Rıza ve senkronizasyon
 | Tablo | Sütunlar | Not |
 |---|---|---|
-| `banks` | hhs_kod (PK), name, logo_url, api_base_url, supports_decoupled, is_active | HHS-YÖS API'den doldurulur |
+| `banks` | hhs_kod (PK), name, logo_url, api_base_url, supports_decoupled, is_active | Gerçekte HHS-YÖS API'den; şimdilik `Hhs:Banks` yapılandırmasından Api açılışında upsert, listeden çıkan banka pasifleşir |
 | `consents` | id, user_id, hhs_kod, riza_no (UK), riza_drm (B/Y/K/S/I), riza_ipt_dty_kod, izin_turleri (JSON dizi, örn. `["01","03"]`), erisim_izni_son_trh, hesap_isl_bsl_zmn, hesap_isl_bts_zmn, gkd_yontem (Y/A), drm_kod_hash, created_at, updated_at | **Kısıt:** (user_id, hhs_kod) için tek aktif rıza → `WHERE riza_drm IN ('B','Y','K')` filtered unique index |
 | `consent_tokens` | consent_id (PK), access_token_enc, access_expires_at, refresh_token_enc, refresh_expires_at, updated_at | Şifreli; sadece Infrastructure okur |
 | `sync_jobs` | id, consent_id, resource, psu_initiated (E/H), window_start, window_end, status, http_status, error_code, started_at, finished_at | Günde ≤4 sistem sorgusu kotası bu tablodan sayılır |

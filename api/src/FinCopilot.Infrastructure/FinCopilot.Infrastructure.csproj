@@ -12,6 +12,7 @@
     </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
     <PackageReference Include="Hangfire.Core" />
     <PackageReference Include="Hangfire.SqlServer" />
   </ItemGroup>

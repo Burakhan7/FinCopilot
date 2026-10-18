@@ -1,7 +1,8 @@
-using FinCopilot.Domain.Consents;
+using FinCopilot.Application.Abstractions;
 using FinCopilot.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.MsSql;
@@ -16,24 +17,37 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     private readonly MsSqlContainer _db = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
 
+    /// <summary>Gerçek HHS yerine; testler bankadaki onay/iptal adımlarını bununla canlandırır.</summary>
+    public FakeHhsClient Hhs { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:FinCopilot", _db.GetConnectionString());
         builder.UseSetting("Jwt:SigningKey", "entegrasyon-testi-icin-en-az-otuz-iki-baytlik-anahtar");
+        builder.UseSetting("Security:TcknHashKey", "entegrasyon-testi-icin-tckn-hmac-anahtari-32b");
         builder.UseSetting("Auth:OtpFixedCode", OtpCode);
         builder.UseSetting("Auth:OtpResendCooldown", "00:00:00");
+
+        string[][] banks = [["9001", "Anadolu Bank"], ["9002", "Ege Bank"], ["9003", "Marmara Bank"]];
+        for (var i = 0; i < banks.Length; i++)
+        {
+            builder.UseSetting($"Hhs:Banks:{i}:HhsKod", banks[i][0]);
+            builder.UseSetting($"Hhs:Banks:{i}:Name", banks[i][1]);
+            builder.UseSetting($"Hhs:Banks:{i}:ApiBaseUrl", "http://fake-bank.test");
+        }
+
+        builder.ConfigureTestServices(s => s.AddSingleton<IHhsClient>(Hhs));
     }
 
     public async Task InitializeAsync()
     {
         await _db.StartAsync();
 
-        await using var scope = Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await db.Database.MigrateAsync();
-        db.Banks.Add(new Bank { HhsKod = TestBankCode, Name = "Anadolu Bank", ApiBaseUrl = "http://localhost:8090" });
-        await db.SaveChangesAsync();
+        // Api açılışta banka kataloğunu DB'ye yazar; bu yüzden şema host'tan önce hazır olmalı.
+        await using (var db = CreateDbContext())
+            await db.Database.MigrateAsync();
+        _ = Services;
     }
 
     public AppDbContext CreateDbContext() =>

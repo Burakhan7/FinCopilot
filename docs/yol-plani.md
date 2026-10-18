@@ -35,6 +35,10 @@ Varsayımlar: Ekim 2026 – Haziran 2027, bitirme teslimi Haziran 2027. Güz dö
 | JWT | HS256, access 15 dk, refresh 30 gün (DB'de, rotation + tekrar kullanım tespiti) | 18.10.2026 |
 | TCKN alma anı | İlk banka bağlamada (kayıtta değil) | 18.10.2026 |
 | Yeni cihaz girişi | SMS + PIN; kayıtlı cihazda sadece PIN | 18.10.2026 |
+| TCKN arama özeti | HMAC-SHA256, anahtar config'te (`Security__TcknHashKey`) | 18.10.2026 |
+| HHS HTTP dayanıklılığı | Microsoft.Extensions.Http.Resilience; retry sadece GET | 18.10.2026 |
+| Banka listesi | `Hhs:Banks` yapılandırması → açılışta `banks` tablosuna | 18.10.2026 |
+| Ayrık GKD | Olay dinleme ile birlikte (Faz 2, 5. adım) | 18.10.2026 |
 
 Not: Teknoloji ve mimari kararları Burakhan verir; yeni bir karar gerektiğinde seçenekler sunulur.
 

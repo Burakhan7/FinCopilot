@@ -35,6 +35,15 @@ Kullanıcının farklı bankalardaki hesap ve kart verilerini Açık Bankacılı
 
 Faz 0 – Hazırlık (Ekim 2026). Ayrıntılar için [yol planı](docs/yol-plani.md).
 
+## Doğrulanması gerekenler
+
+Spesifikasyondan henüz doğrulanamayan ve varsayımla ilerlenen noktalar:
+
+- **HHS-YÖS API (banka listesi):** Gerçek ortamda `banks` tablosu bu API'den dolacak. Uç adı ve alan adları incelenmedi; şimdilik liste `appsettings` → `Hhs:Banks`'ten geliyor (`api/src/FinCopilot.Infrastructure/Hhs/BankCatalog.cs`).
+- **Kart detay (08) ve kart hareketleri (09) alan adları:** bkz. [ÖHVPS referansı](docs/ohvps-hesap-bilgisi-referans.md) §8.
+- **Hata yanıtı gövdesi:** Mock HHS `errorCode` / `moreInformationTr` kullanıyor; spesifikasyondaki hata nesnesiyle karşılaştırılmalı (`mock-hhs/app/errors.py`).
+- **v2.0.1 farkları:** Sitede v2.0.1 yayınlanmış; v2.0.0 ile farkları kontrol edilmeli.
+
 ## Not
 
 Bu proje bir bitirme projesidir. Gerçek banka bağlantısı yoktur; veri `mock-hhs/` üzerindeki sahte banka sunucusundan ve sentetik veriden gelir. Uygulama yalnızca okuma yapar, para hareketi başlatmaz ve yatırım tavsiyesi vermez.
