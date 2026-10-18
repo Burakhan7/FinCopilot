@@ -129,11 +129,12 @@ public class ConsentToken
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
+/// <summary>Bir rıza için tek senkron çalıştırması. Sistem tetikli günlük kota bu kayıtlardan sayılır.</summary>
 public class SyncJob
 {
     public Guid Id { get; set; }
     public Guid ConsentId { get; set; }
-    /// <summary>hesaplar, bakiye, islemler, kartlar, kart-detay, kart-hareketleri</summary>
+    /// <summary><see cref="SyncKind"/></summary>
     public required string Resource { get; set; }
     /// <summary>E: kullanıcı tetikli, H: sistem tetikli (günde ≤4).</summary>
     public required string PsuInitiated { get; set; }
@@ -144,6 +145,26 @@ public class SyncJob
     public string? ErrorCode { get; set; }
     public DateTimeOffset StartedAt { get; set; }
     public DateTimeOffset? FinishedAt { get; set; }
+}
+
+public static class SyncKind
+{
+    /// <summary>Bağlanınca 12 aylık ilk yükleme (PSU-Initiated=E).</summary>
+    public const string Backfill = "backfill";
+    /// <summary>Günde 4 sabit saatte (PSU-Initiated=H, 24 saat penceresi).</summary>
+    public const string Scheduled = "scheduled";
+}
+
+public static class SyncStatus
+{
+    public const string Running = "running";
+    public const string Succeeded = "succeeded";
+    /// <summary>Geçici hata (ağ, 5xx); Hangfire yeniden dener.</summary>
+    public const string Failed = "failed";
+    /// <summary>Günlük sistem sorgu kotası dolu; denenmedi veya HHS reddetti.</summary>
+    public const string Quota = "quota";
+    /// <summary>Rıza artık aktif değil; senkron durdu.</summary>
+    public const string Revoked = "revoked";
 }
 
 public class EventInboxItem

@@ -87,7 +87,7 @@ public class SchemaTests(ApiFactory factory)
         var consent = NewConsent(user.Id, RizaDurumu.YetkiKullanildi);
         var account = new Account { Id = Guid.NewGuid(), UserId = user.Id, ConsentId = consent.Id, HhsKod = ApiFactory.TestBankCode, HspRef = "H1", ParaBirimi = "TRY" };
         var card = new Card { Id = Guid.NewGuid(), UserId = user.Id, ConsentId = consent.Id, HhsKod = ApiFactory.TestBankCode, KartRef = "K1", KartTipi = "K" };
-        var cardTx = new CardTransaction { Id = Guid.NewGuid(), CardId = card.Id, IslemNo = "C1", Amount = 1200m, Currency = "TRY", InstallmentCount = 3, OccurredAt = DateTimeOffset.UtcNow };
+        var cardTx = new CardTransaction { Id = Guid.NewGuid(), CardId = card.Id, IslemNo = "C1", Amount = 1200m, Currency = "TRY", Direction = "B", InstallmentCount = 3, OccurredAt = DateTimeOffset.UtcNow };
 
         await using (var db = factory.CreateDbContext())
         {

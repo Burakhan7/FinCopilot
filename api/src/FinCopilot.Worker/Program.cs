@@ -4,16 +4,13 @@ using Hangfire;
 
 var builder = Host.CreateApplicationBuilder(args);
 
+// Hangfire deposu AddInfrastructure içinde; Worker ayrıca işleri yürüten sunucuyu çalıştırır.
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-
-// Hangfire işleri aynı SQL Server veritabanında, "HangFire" şemasında tutulur.
-builder.Services.AddHangfire(cfg => cfg
-    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-    .UseSimpleAssemblyNameTypeSerializer()
-    .UseRecommendedSerializerSettings()
-    .UseSqlServerStorage(builder.Configuration.GetConnectionString(FinCopilot.Infrastructure.DependencyInjection.ConnectionStringName)));
 builder.Services.AddHangfireServer();
 
 var host = builder.Build();
+
+FinCopilot.Infrastructure.DependencyInjection.RegisterRecurringJobs(host.Services);
+
 host.Run();

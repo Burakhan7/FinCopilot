@@ -103,6 +103,8 @@ public class CardTransaction
     public DateTimeOffset OccurredAt { get; set; }
     public decimal Amount { get; set; }
     public required string Currency { get; set; }
+    /// <summary>B: harcama, A: iade / ödeme.</summary>
+    public required string Direction { get; set; }
     public int InstallmentCount { get; set; } = 1;
     public string? IslTuru { get; set; }
     public string? MerchantRaw { get; set; }

@@ -18,7 +18,8 @@ public sealed class ListConsentsHandler(IAppDbContext db) : IRequestHandler<List
             orderby c.CreatedAt descending
             select new { Consent = c, BankName = b.Name }).ToListAsync(ct);
 
-        return rows.Select(r => ConsentService.ToDto(r.Consent, r.BankName)).ToList();
+        var syncs = await ConsentService.LastSyncsAsync(db, rows.Select(r => r.Consent.Id).ToList(), ct);
+        return rows.Select(r => ConsentService.ToDto(r.Consent, r.BankName, syncs.GetValueOrDefault(r.Consent.Id))).ToList();
     }
 }
 

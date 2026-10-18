@@ -1,6 +1,7 @@
 using FinCopilot.Application.Auth;
 using FinCopilot.Application.Behaviors;
 using FinCopilot.Application.Consents;
+using FinCopilot.Application.Sync;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,6 +23,8 @@ public static class DependencyInjection
         services.AddScoped<OtpService>();
         services.AddScoped<SessionIssuer>();
         services.AddScoped<ConsentService>();
+        services.AddScoped<BankDataWriter>();
+        services.AddScoped<SyncService>();
 
         return services;
     }

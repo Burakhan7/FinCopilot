@@ -324,6 +324,7 @@ namespace FinCopilot.Infrastructure.Persistence.Migrations
                         .HasName("pk_card_statements");
 
                     b.HasIndex("CardId", "StatementDate")
+                        .IsUnique()
                         .HasDatabaseName("ix_card_statements_card_id_statement_date");
 
                     b.ToTable("card_statements");
@@ -369,6 +370,12 @@ namespace FinCopilot.Infrastructure.Persistence.Migrations
                         .HasMaxLength(512)
                         .HasColumnType("nvarchar(512)")
                         .HasColumnName("description_raw");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(1)
+                        .HasColumnType("nvarchar(1)")
+                        .HasColumnName("direction");
 
                     b.Property<string>("FxInfo")
                         .HasMaxLength(256)

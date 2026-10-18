@@ -28,7 +28,7 @@ public sealed class CompleteGkdValidator : AbstractValidator<CompleteGkdCommand>
     }
 }
 
-public sealed class CompleteGkdHandler(IAppDbContext db, IHhsClient hhs, ConsentService consents)
+public sealed class CompleteGkdHandler(IAppDbContext db, IHhsClient hhs, ConsentService consents, ISyncJobScheduler jobs)
     : IRequestHandler<CompleteGkdCommand, ConsentDto>
 {
     public async Task<ConsentDto> Handle(CompleteGkdCommand request, CancellationToken ct)
@@ -57,6 +57,11 @@ public sealed class CompleteGkdHandler(IAppDbContext db, IHhsClient hhs, Consent
         }
 
         await db.SaveChangesAsync(ct);
+
+        // 12 aylık ilk yükleme arka planda (Worker); mobil durumu GET /consents/{id} ile izler.
+        if (consent.RizaDrm == RizaDurumu.YetkiKullanildi)
+            jobs.EnqueueBackfill(consent.Id);
+
         return await consents.ToDtoAsync(consent, ct);
     }
 }

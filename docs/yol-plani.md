@@ -39,6 +39,9 @@ Varsayımlar: Ekim 2026 – Haziran 2027, bitirme teslimi Haziran 2027. Güz dö
 | HHS HTTP dayanıklılığı | Microsoft.Extensions.Http.Resilience; retry sadece GET | 18.10.2026 |
 | Banka listesi | `Hhs:Banks` yapılandırması → açılışta `banks` tablosuna | 18.10.2026 |
 | Ayrık GKD | Olay dinleme ile birlikte (Faz 2, 5. adım) | 18.10.2026 |
+| İlk yükleme | Hangfire işi; Api kuyruğa atar, Worker yürütür | 18.10.2026 |
+| Zamanlı senkron | Günde 4 sabit saat: 00/06/12/18 (TR) | 18.10.2026 |
+| Senkron hataları | Sınıflandırılmış: ağ/5xx → 3 deneme; 401 → token yenile + 1 tekrar; kota/iptal/4xx → tekrar yok | 18.10.2026 |
 
 Not: Teknoloji ve mimari kararları Burakhan verir; yeni bir karar gerektiğinde seçenekler sunulur.
 

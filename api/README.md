@@ -51,7 +51,22 @@ Hata kodları: `tckn_already_set`, `tckn_in_use`, `tckn_required`, `bank_not_fou
 
 Mobil olmadan denemek için: `$env:Hhs__RedirectUri="http://localhost:8090/_mock/callback"` ile Api'yi başlat; banka dönüşü Mock HHS'nin test sayfasına düşer, parametreler `GET /_mock/callback/{rizaNo}` ile okunur.
 
+## Senkronizasyon
+- Banka bağlanınca (`callback` → `K`) Api ilk yüklemeyi Hangfire'a atar; **Worker** çalışıyor olmalı. İlerleme: `GET /consents/{id}` → `lastSync {kind, status}` (`lastSync` boşsa iş henüz başlamadı).
+- İlk yükleme: `PSU-Initiated=E`, rızanın işlem aralığı (≤12 ay), 30 günlük pencereler, tüm sayfalar.
+- Zamanlı: Hangfire tekrarlayan işi `scheduled-sync`, her gün 00/06/12/18 (TR), rıza başına ayrı iş; `PSU-Initiated=H`, son 24 saat; rıza başına günde en fazla 4 (`sync_jobs`'tan sayılır).
+- Hatalar: ağ/5xx → `failed` + Hangfire 3 deneme; 401 → token yenilenip 1 kez tekrar; 429 → `quota`; ConsentRevoked → rıza HHS'den tazelenir, `revoked`; diğer 4xx → `failed`, tekrar yok.
+- Banka kartı hareketleri hesap hareketlerinden okunur; kart detay/hareketleri sadece kredi kartları için çekilir.
+- Dashboard (Development): `http://localhost:8080/hangfire`
+
+| Uç (JWT) | Açıklama |
+|---|---|
+| `GET /accounts` | Aktif hesaplar, maskeli IBAN ve son bakiye |
+| `GET /cards` | Aktif kartlar; kredi kartında son ekstre |
+
 ## Yapılandırma
+Worker da `Hhs` bölümüne (YÖS kodu + banka adresleri) ihtiyaç duyar; Api ile aynı olmalı (`src/FinCopilot.Worker/appsettings.Development.json`).
+
 Üretimde zorunlu ortam değişkenleri: `Jwt__SigningKey`, `Security__TcknHashKey` (ikisi de ≥32 bayt). `Auth:OtpFixedCode` Development/Testing dışında verilirse Api açılmaz. Banka listesi ve YÖS kodu: `Hhs` bölümü (bkz. `appsettings.Development.json`).
 
 ## Test

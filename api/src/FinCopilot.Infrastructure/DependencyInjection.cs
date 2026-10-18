@@ -3,6 +3,8 @@ using FinCopilot.Application.Auth;
 using FinCopilot.Application.Consents;
 using FinCopilot.Infrastructure.Auth;
 using FinCopilot.Infrastructure.Hhs;
+using FinCopilot.Infrastructure.Jobs;
+using Hangfire;
 using FinCopilot.Infrastructure.Persistence;
 using FinCopilot.Infrastructure.Security;
 using Microsoft.AspNetCore.DataProtection;
@@ -49,6 +51,25 @@ public static class DependencyInjection
                 o.Retry.DisableForUnsafeHttpMethods();
             });
 
+        // Hangfire deposu (Api: sadece kuyruğa atar; Worker: AddHangfireServer ile yürütür).
+        // İşler aynı veritabanında "HangFire" şemasında.
+        services.AddHangfire(cfg => cfg
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UseSqlServerStorage(connectionString));
+        services.AddScoped<SyncJobs>();
+        services.AddSingleton<ISyncJobScheduler, HangfireSyncJobScheduler>();
+
         return services;
     }
+
+    /// <summary>Zamanlı senkronu Hangfire'a kaydeder (Worker açılışında).</summary>
+    public static void RegisterRecurringJobs(IServiceProvider services) =>
+        services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<SyncJobs>(
+            SyncJobs.ScheduledSyncRecurringId,
+            j => j.ScheduleAllAsync(CancellationToken.None),
+            SyncJobs.ScheduledSyncCron,
+            // Hangfire saat dilimini ID ile saklayıp tekrar çözer: sistemde kayıtlı bir ID olmalı (IANA, Windows'ta da çalışır).
+            new RecurringJobOptions { TimeZone = TimeZoneInfo.FindSystemTimeZoneById(SyncJobs.TimeZoneId) });
 }

@@ -5,6 +5,7 @@ using FinCopilot.Infrastructure;
 using FinCopilot.Infrastructure.Auth;
 using FinCopilot.Infrastructure.Hhs;
 using FinCopilot.Infrastructure.Persistence;
+using Hangfire;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +36,8 @@ app.UseStatusCodePages();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    // İş kuyruğunu izlemek için; varsayılan yetki kuralı sadece yerel isteklere izin verir.
+    app.UseHangfireDashboard("/hangfire");
 }
 
 app.UseAuthentication();

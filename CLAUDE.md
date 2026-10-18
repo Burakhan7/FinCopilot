@@ -30,6 +30,7 @@ Bitirme projesi (Manisa Celal Bayar Üniv., teslim Haziran 2027). Geliştirici: 
 | Mapping | Elle (kütüphane yok) |
 | Doğrulama | FluentValidation, MediatR `ValidationBehavior` ile |
 | Test | xUnit + Testcontainers (gerçek SQL Server 2022; Docker Desktop açık olmalı) |
+| Senkron | İlk yükleme Hangfire işi (Api kuyruğa atar, Worker yürütür). Zamanlı 4 sabit saat 00/06/12/18 TR. Hatalar sınıflandırılmış (ağ/5xx → 3 deneme; 401 → token yenile + 1; kota/iptal/4xx → tekrar yok). 5. adım 5a (motor) + 5b (olaylar) |
 | Rıza modülü | TCKN ilk banka bağlamada (`PUT /me/tckn`), arama özeti HMAC-SHA256 (`Security__TcknHashKey`). Banka listesi `Hhs:Banks` config → açılışta `banks`'e upsert. HHS HTTP: Microsoft.Extensions.Http.Resilience (retry sadece GET). İzinler 01–09 hepsi, süre 180 gün, geçmiş 365 gün. Ayrık GKD 5. adımda |
 | Geliştirme DB | Docker'da SQL Server 2022 (`docker-compose.yml`, sa şifresi `FinCopilot_Dev_2026!`) |
 
@@ -59,7 +60,8 @@ mobile/      Flutter (Faz 2 sonu – boş)
 2. ✅ Kullanıcı kaydı/giriş (`/auth/*`, `/me`) — toplam 36 birim + 22 integration testi
 3. ✅ Rıza modülü (`/banks`, `/me/tckn`, `/consents/*`): drmKod, durum makinesi (Domain), token şifreleme, HHS'den durum tazeleme — toplam 66 birim + 40 integration; gerçek Mock HHS ile elle uçtan uca denendi
 4. ✅ `IHhsClient` adapter (MockHhsClient): rıza/token + 6 veri ucu (hesaplar, bakiye, işlemler, kartlar, kart-detay, kart-hareketleri), PSU-Initiated, sayfalama (`HhsPage`), kota hatası (`IsRateExceeded`). Sözleşme testleri gerçek Mock HHS yanıtlarından alınmış fixture'larla (`tests/FinCopilot.UnitTests/Hhs/Fixtures/`) — toplam 75 birim + 40 integration. `FakeHhsClient` veri uçları 5. adımda doldurulacak
-5. Senkronizasyon: ilk 12 ay yükleme, Hangfire ile günde ≤4 sorgu, `POST /olay-dinleme`. Ayrıca: rıza K olunca olay aboneliği + initial_backfill tetikleme, ayrık GKD, süre dolumu işi (check_consent_expiry)
+5a. ✅ Senkron motoru (`SyncService`, `BankDataWriter`, `SyncJobs`): ilk 12 ay yükleme (callback → Hangfire → Worker), zamanlı senkron 00/06/12/18 TR (günde ≤4, `sync_jobs`'tan), sınıflandırılmış hata/yeniden deneme, `GET /accounts`, `GET /cards`, `ConsentDto.lastSync` — toplam 86 birim + 51 integration; gerçek Mock HHS + Api + Worker ile uçtan uca denendi
+5b. Olaylar: olay aboneliği (rıza K olunca, banka başına tek abonelik), `POST /olay-dinleme` (202, `event_inbox` ile idempotent; BAKIYE → kota varsa hedefli senkron, yoksa sıradaki zamanlı senkron; HESAP_BILGISI_RIZASI → durum tazele), ayrık GKD, süre dolumu işi (check_consent_expiry)
 6. Uçtan uca test (Mock HHS + backend)
 
 **Backend'i çalıştırma:** bkz. [api/README.md](api/README.md) (`docker compose up -d sqlserver` → `dotnet ef database update` → Api `http://localhost:8080`).

@@ -210,7 +210,7 @@ erDiagram
 | `banks` | hhs_kod (PK), name, logo_url, api_base_url, supports_decoupled, is_active | Gerçekte HHS-YÖS API'den; şimdilik `Hhs:Banks` yapılandırmasından Api açılışında upsert, listeden çıkan banka pasifleşir |
 | `consents` | id, user_id, hhs_kod, riza_no (UK), riza_drm (B/Y/K/S/I), riza_ipt_dty_kod, izin_turleri (JSON dizi, örn. `["01","03"]`), erisim_izni_son_trh, hesap_isl_bsl_zmn, hesap_isl_bts_zmn, gkd_yontem (Y/A), drm_kod_hash, created_at, updated_at | **Kısıt:** (user_id, hhs_kod) için tek aktif rıza → `WHERE riza_drm IN ('B','Y','K')` filtered unique index |
 | `consent_tokens` | consent_id (PK), access_token_enc, access_expires_at, refresh_token_enc, refresh_expires_at, updated_at | Şifreli; sadece Infrastructure okur |
-| `sync_jobs` | id, consent_id, resource, psu_initiated (E/H), window_start, window_end, status, http_status, error_code, started_at, finished_at | Günde ≤4 sistem sorgusu kotası bu tablodan sayılır |
+| `sync_jobs` | id, consent_id, resource (`backfill`/`scheduled`), psu_initiated (E/H), window_start, window_end, status (`running`/`succeeded`/`failed`/`quota`/`revoked`), http_status, error_code, started_at, finished_at | Rıza başına bir senkron çalıştırması. Günde ≤4 sistem sorgusu kotası TR gününe göre bu tablodan sayılır (yerelde atlanan `quota` kayıtları sayılmaz) |
 | `event_inbox` | id, olay_no (UK), olay_tipi, kaynak_tipi, kaynak_no, payload (JSON), received_at, processed_at | Olay dinleme idempotency |
 | `data_protection_keys` | id, friendly_name, xml | ASP.NET Data Protection anahtar halkası (Api + Worker ortak) |
 
@@ -221,8 +221,8 @@ erDiagram
 | `balance_snapshots` | id, account_id, bky_ttr, blk_ttr, para_birimi, kul_krd_ttr, krd_dhl_gstr, bky_zmn, source (sync/event) | `bky`, `krdHsp` |
 | `transactions` | id, account_id, isl_no, ref_no, amount, currency, direction (B/A/N), isl_tur, isl_amc, kanal, description_raw, ohk_msj, counterparty_name, counterparty_iban_masked, occurred_at, merchant_id, category_id, category_source, category_confidence, recurring_item_id · **UK** (account_id, isl_no) | `islTml`, `islDty` |
 | `cards` | id, user_id, consent_id, hhs_kod, kart_ref, son_no, kart_tipi, alt_kart_tipi, kart_formu, kart_turu, kart_statu, kart_sema, urun_adi, is_active · **UK** (consent_id, kart_ref) | kart listesi (07) |
-| `card_statements` | id, card_id, statement_date, due_date, period_debt, min_payment, credit_limit, used_limit, cash_limit, used_cash_limit, currency, fetched_at | kart-detay (08) ⚠ alan adları doğrulanacak |
-| `card_transactions` | id, card_id, islem_no, occurred_at, amount, currency, installment_count, isl_turu, merchant_raw, description_raw, fx_info (JSON), merchant_id, category_id, category_source, category_confidence, recurring_item_id · **UK** (card_id, islem_no) | kart-hareketleri (09) ⚠ |
+| `card_statements` | id, card_id, statement_date, due_date, period_debt, min_payment, credit_limit, used_limit, cash_limit, used_cash_limit, currency, fetched_at · **UK** (card_id, statement_date) | kart-detay (08) ⚠ alan adları doğrulanacak. Sadece kredi kartları |
+| `card_transactions` | id, card_id, islem_no, occurred_at, amount (pozitif), currency, direction (B harcama / A iade-ödeme), installment_count, isl_turu, merchant_raw, description_raw, fx_info (JSON), merchant_id, category_id, category_source, category_confidence, recurring_item_id · **UK** (card_id, islem_no) | kart-hareketleri (09) ⚠ |
 | `installments` | id, card_transaction_id, card_id, installment_no, total_installments, amount, due_month | Taksitli işlemden türetilir |
 
 ### Zenginleştirme

@@ -16,7 +16,13 @@ public sealed record ConsentDto(
     IReadOnlyList<string> IzinTurleri,
     DateTimeOffset? ErisimIzniSonTrh,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    LastSyncDto? LastSync);
+
+/// <summary>Son senkron çalıştırması; mobil "veriler yükleniyor" durumunu buradan gösterir.</summary>
+/// <param name="Kind">backfill / scheduled</param>
+/// <param name="Status">running / succeeded / failed / quota / revoked</param>
+public sealed record LastSyncDto(string Kind, string Status, DateTimeOffset StartedAt, DateTimeOffset? FinishedAt);
 
 /// <summary>Rıza işlemlerinin ortak parçaları. Kaydetmek (SaveChanges) çağıranın işidir.</summary>
 public sealed class ConsentService(IAppDbContext db, IHhsClient hhs, ISecretProtector protector, TimeProvider clock)
@@ -76,6 +82,14 @@ public sealed class ConsentService(IAppDbContext db, IHhsClient hhs, ISecretProt
         if (token.AccessExpiresAt - RefreshSkew > clock.GetUtcNow())
             return protector.Unprotect(token.AccessTokenEnc, SecretPurpose.BankToken);
 
+        return await RefreshAccessTokenAsync(consent, ct);
+    }
+
+    /// <summary>Süresine bakmadan yeniler (HHS 401 döndürdüğünde).</summary>
+    public async Task<string> RefreshAccessTokenAsync(Consent consent, CancellationToken ct)
+    {
+        var token = consent.Token
+            ?? throw new InvalidOperationException($"Rıza {consent.Id} için erişim belirteci yok.");
         var refresh = protector.Unprotect(token.RefreshTokenEnc!, SecretPurpose.BankToken);
         var renewed = await hhs.RefreshAccessTokenAsync(consent.HhsKod, consent.RizaNo!, refresh, ct);
         StoreTokens(consent, renewed);
@@ -85,11 +99,22 @@ public sealed class ConsentService(IAppDbContext db, IHhsClient hhs, ISecretProt
     public async Task<ConsentDto> ToDtoAsync(Consent c, CancellationToken ct)
     {
         var bankName = await db.Banks.Where(b => b.HhsKod == c.HhsKod).Select(b => b.Name).FirstAsync(ct);
-        return ToDto(c, bankName);
+        var lastSync = (await LastSyncsAsync(db, [c.Id], ct)).GetValueOrDefault(c.Id);
+        return ToDto(c, bankName, lastSync);
     }
 
-    public static ConsentDto ToDto(Consent c, string bankName) => new(
+    public static ConsentDto ToDto(Consent c, string bankName, LastSyncDto? lastSync) => new(
         c.Id, c.HhsKod, bankName, c.RizaDrm, RizaDurumu.Aciklama(c.RizaDrm),
         c.RizaIptDtyKod, c.RizaIptDtyKod is null ? null : RizaIptalKodu.Aciklama(c.RizaIptDtyKod),
-        c.IzinTurleri, c.ErisimIzniSonTrh, c.CreatedAt, c.UpdatedAt);
+        c.IzinTurleri, c.ErisimIzniSonTrh, c.CreatedAt, c.UpdatedAt, lastSync);
+
+    public static async Task<Dictionary<Guid, LastSyncDto>> LastSyncsAsync(IAppDbContext db, IReadOnlyCollection<Guid> consentIds, CancellationToken ct)
+    {
+        var jobs = await db.SyncJobs.AsNoTracking()
+            .Where(j => consentIds.Contains(j.ConsentId))
+            .GroupBy(j => j.ConsentId)
+            .Select(g => g.OrderByDescending(j => j.StartedAt).First())
+            .ToListAsync(ct);
+        return jobs.ToDictionary(j => j.ConsentId, j => new LastSyncDto(j.Resource, j.Status, j.StartedAt, j.FinishedAt));
+    }
 }

@@ -1,0 +1,14 @@
+using System.Collections.Concurrent;
+using FinCopilot.Application.Abstractions;
+
+namespace FinCopilot.IntegrationTests;
+
+/// <summary>Testlerde Hangfire yerine: kuyruğa atılan işleri kaydeder, çalıştırmaz (testler SyncService'i doğrudan çağırır).</summary>
+public sealed class RecordingScheduler : ISyncJobScheduler
+{
+    public ConcurrentQueue<Guid> Backfills { get; } = new();
+    public ConcurrentQueue<Guid> ScheduledSyncs { get; } = new();
+
+    public void EnqueueBackfill(Guid consentId) => Backfills.Enqueue(consentId);
+    public void EnqueueScheduledSync(Guid consentId) => ScheduledSyncs.Enqueue(consentId);
+}

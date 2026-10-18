@@ -20,6 +20,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     /// <summary>Gerçek HHS yerine; testler bankadaki onay/iptal adımlarını bununla canlandırır.</summary>
     public FakeHhsClient Hhs { get; } = new();
 
+    public RecordingScheduler Jobs { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -37,7 +39,11 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             builder.UseSetting($"Hhs:Banks:{i}:ApiBaseUrl", "http://fake-bank.test");
         }
 
-        builder.ConfigureTestServices(s => s.AddSingleton<IHhsClient>(Hhs));
+        builder.ConfigureTestServices(s =>
+        {
+            s.AddSingleton<IHhsClient>(Hhs);
+            s.AddSingleton<ISyncJobScheduler>(Jobs);
+        });
     }
 
     public async Task InitializeAsync()

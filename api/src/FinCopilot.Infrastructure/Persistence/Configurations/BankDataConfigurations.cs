@@ -102,7 +102,7 @@ internal sealed class CardStatementConfiguration : IEntityTypeConfiguration<Card
     {
         b.Property(x => x.Currency).HasMaxLength(3);
         b.HasOne<Card>().WithMany().HasForeignKey(x => x.CardId).OnDelete(DeleteBehavior.Cascade);
-        b.HasIndex(x => new { x.CardId, x.StatementDate });
+        b.HasIndex(x => new { x.CardId, x.StatementDate }).IsUnique();
     }
 }
 
@@ -113,6 +113,7 @@ internal sealed class CardTransactionConfiguration : IEntityTypeConfiguration<Ca
         b.ToTable(t => t.HasCheckConstraint("ck_card_transactions_fx_info_json", "[fx_info] IS NULL OR ISJSON([fx_info]) = 1"));
         b.Property(x => x.IslemNo).HasMaxLength(64);
         b.Property(x => x.Currency).HasMaxLength(3);
+        b.Property(x => x.Direction).HasMaxLength(1);
         b.Property(x => x.IslTuru).HasMaxLength(64);
         b.Property(x => x.MerchantRaw).HasMaxLength(256);
         b.Property(x => x.DescriptionRaw).HasMaxLength(512);
