@@ -211,7 +211,7 @@ erDiagram
 | `consents` | id, user_id, hhs_kod, riza_no (UK), riza_drm (B/Y/K/S/I), riza_ipt_dty_kod, izin_turleri (JSON dizi, örn. `["01","03"]`), erisim_izni_son_trh, hesap_isl_bsl_zmn, hesap_isl_bts_zmn, gkd_yontem (Y/A), drm_kod_hash, created_at, updated_at | **Kısıt:** (user_id, hhs_kod) için tek aktif rıza → `WHERE riza_drm IN ('B','Y','K')` filtered unique index |
 | `consent_tokens` | consent_id (PK), access_token_enc, access_expires_at, refresh_token_enc, refresh_expires_at, updated_at | Şifreli; sadece Infrastructure okur |
 | `sync_jobs` | id, consent_id, resource (`backfill`/`scheduled`), psu_initiated (E/H), window_start, window_end, status (`running`/`succeeded`/`failed`/`quota`/`revoked`), http_status, error_code, started_at, finished_at | Rıza başına bir senkron çalıştırması. Günde ≤4 sistem sorgusu kotası TR gününe göre bu tablodan sayılır (yerelde atlanan `quota` kayıtları sayılmaz) |
-| `event_inbox` | id, olay_no (UK), olay_tipi, kaynak_tipi, kaynak_no, payload (JSON), received_at, processed_at | Olay dinleme idempotency |
+| `event_inbox` | id, olay_no (UK), olay_tipi, kaynak_tipi, kaynak_no, payload (JSON), received_at, processed_at | Olay dinleme idempotency. `processed_at` boşsa Worker henüz işlemedi (geçici hata → Hangfire tekrar dener) |
 | `data_protection_keys` | id, friendly_name, xml | ASP.NET Data Protection anahtar halkası (Api + Worker ortak) |
 
 ### Hesap ve kart verisi (ÖHVPS'ten)
@@ -236,7 +236,7 @@ erDiagram
 ### Çıktılar
 | Tablo | Sütunlar | Not |
 |---|---|---|
-| `alerts` | id, user_id, type, severity, title, payload (JSON), dedupe_key, created_at, sent_at, read_at · **UK** (user_id, dedupe_key) | Aynı uyarı iki kez gitmez |
+| `alerts` | id, user_id, type, severity, title, payload (JSON), dedupe_key, created_at, sent_at, read_at · **UK** (user_id, dedupe_key) | Aynı uyarı iki kez gitmez. İlk tip: `consent_expiring` (dedupe `consent_expiring:{consentId}`, 7 gün kala) |
 | `savings_events` | id, user_id, type (kmh/late_fee/interest/subscription/card_float/fee), amount_saved, alert_id, evidence (JSON), detected_at | Kazanç sayacı |
 | `goals` | id, user_id, name, target_amount, target_date, created_at | F2 |
 

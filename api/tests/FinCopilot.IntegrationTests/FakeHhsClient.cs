@@ -11,7 +11,7 @@ public sealed class FakeHhsClient : IHhsClient
 {
     public sealed class State
     {
-        public required HhsConsentRequest Request { get; init; }
+        public required HhsConsentRequest Request { get; set; }
         public string Drm { get; set; } = "B";
         public string? IptalKodu { get; set; }
         public string? YetKod { get; set; }
@@ -40,6 +40,12 @@ public sealed class FakeHhsClient : IHhsClient
     public ConcurrentDictionary<string, State> Consents { get; } = new();
     public ConcurrentBag<(string RizaNo, string? AccessToken)> Revocations { get; } = [];
 
+    /// <summary>Banka başına tek olay aboneliği (hhsKod → abonelik).</summary>
+    public ConcurrentDictionary<string, HhsSubscription> Subscriptions { get; } = new();
+
+    /// <summary>Kullanıcı bankanın kendi uygulamasında ayrık GKD isteğini onayladı: Y + yetKod (rıza sorgusunda döner).</summary>
+    public void AuthorizeDecoupled(string rizaNo) => Authorize(rizaNo);
+
     /// <summary>Bankanın erişim belirtecini geçersiz kılar (süresi beklenenden önce bitmiş gibi).</summary>
     public void InvalidateAccessToken(string rizaNo) => Consents[rizaNo].AccessToken = "gecersiz-" + Guid.NewGuid().ToString("N");
 
@@ -59,6 +65,11 @@ public sealed class FakeHhsClient : IHhsClient
 
     public Task<HhsConsent> CreateConsentAsync(HhsConsentRequest request, CancellationToken ct)
     {
+        // mock-hhs validate_ayrik: ayrık GKD için AYRIK_GKD_* olaylarına abonelik şart.
+        if (request.Decoupled && !(Subscriptions.TryGetValue(request.HhsKod, out var sub)
+                && sub.Types.Any(t => t.OlayTipi == "AYRIK_GKD_BASARILI") && sub.Types.Any(t => t.OlayTipi == "AYRIK_GKD_BASARISIZ")))
+            throw new HhsException(400, "TR.OHVPS.Field.Invalid", "Ayrık GKD için olay aboneliği gerekli.");
+
         foreach (var old in Consents.Values.Where(c => c.Drm == "B" && c.Request.Tckn == request.Tckn && c.Request.HhsKod == request.HhsKod))
             (old.Drm, old.IptalKodu) = ("I", "01");
 
@@ -115,6 +126,29 @@ public sealed class FakeHhsClient : IHhsClient
 
     public Task<IReadOnlyList<HhsBalance>> GetBalancesAsync(HhsAccess access, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<HhsBalance>>(Data(access, "/bakiye", null).Balances);
+
+    public Task<HhsBalance> GetBalanceAsync(HhsAccess access, string hspRef, CancellationToken ct) =>
+        Data(access, $"/hesaplar/{hspRef}/bakiye", null).Balances.FirstOrDefault(b => b.HspRef == hspRef) is { } b
+            ? Task.FromResult(b)
+            : throw new HhsException(404, "TR.OHVPS.Resource.NotFound", "Kaynak bulunamadı.");
+
+    public Task<HhsSubscription?> GetSubscriptionAsync(string hhsKod, CancellationToken ct) =>
+        Task.FromResult(Subscriptions.GetValueOrDefault(hhsKod));
+
+    public Task<HhsSubscription> CreateSubscriptionAsync(string hhsKod, IReadOnlyList<HhsEventType> types, CancellationToken ct)
+    {
+        var sub = new HhsSubscription(Guid.NewGuid().ToString(), types);
+        if (!Subscriptions.TryAdd(hhsKod, sub))
+            throw new HhsException(400, "TR.OHVPS.Business.EventSubscriptionAlreadyExists", "Bu HHS'de zaten bir olay aboneliği var.");
+        return Task.FromResult(sub);
+    }
+
+    public Task<HhsSubscription> UpdateSubscriptionAsync(string hhsKod, string olayAbonelikNo, IReadOnlyList<HhsEventType> types, CancellationToken ct)
+    {
+        if (!Subscriptions.TryGetValue(hhsKod, out var current) || current.OlayAbonelikNo != olayAbonelikNo)
+            throw new HhsException(404, "TR.OHVPS.Resource.NotFound", "Olay aboneliği bulunamadı.");
+        return Task.FromResult(Subscriptions[hhsKod] = current with { Types = types });
+    }
 
     public Task<HhsPage<HhsTransaction>> GetTransactionsAsync(HhsAccess access, string hspRef, HhsWindow window, int page, int pageSize, CancellationToken ct)
     {
@@ -176,7 +210,9 @@ public sealed class FakeHhsClient : IHhsClient
     private HhsConsent Map(string rizaNo)
     {
         var s = Consents[rizaNo];
-        return new HhsConsent(rizaNo, s.Drm, s.IptalKodu, $"http://fake-bank.test/gkd/{rizaNo}",
-            s.Request.IzinTurleri, s.Request.ErisimIzniSonTrh, s.Request.HesapIslemBslZmn, s.Request.HesapIslemBtsZmn);
+        var decoupled = s.Request.Decoupled;
+        return new HhsConsent(rizaNo, s.Drm, s.IptalKodu, decoupled ? null : $"http://fake-bank.test/gkd/{rizaNo}",
+            s.Request.IzinTurleri, s.Request.ErisimIzniSonTrh, s.Request.HesapIslemBslZmn, s.Request.HesapIslemBtsZmn,
+            YetKod: decoupled && s.Drm == "Y" ? s.YetKod : null);
     }
 }

@@ -153,6 +153,8 @@ public static class SyncKind
     public const string Backfill = "backfill";
     /// <summary>Günde 4 sabit saatte (PSU-Initiated=H, 24 saat penceresi).</summary>
     public const string Scheduled = "scheduled";
+    /// <summary>BAKIYE olayı: tek hesabın bakiyesi (PSU-Initiated=H, kendi kotası).</summary>
+    public const string Event = "event";
 }
 
 public static class SyncStatus

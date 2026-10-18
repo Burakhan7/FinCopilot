@@ -37,6 +37,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             builder.UseSetting($"Hhs:Banks:{i}:HhsKod", banks[i][0]);
             builder.UseSetting($"Hhs:Banks:{i}:Name", banks[i][1]);
             builder.UseSetting($"Hhs:Banks:{i}:ApiBaseUrl", "http://fake-bank.test");
+            builder.UseSetting($"Hhs:Banks:{i}:SupportsDecoupled", banks[i][0] == "9003" ? "false" : "true");
         }
 
         builder.ConfigureTestServices(s =>

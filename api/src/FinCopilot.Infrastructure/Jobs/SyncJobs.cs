@@ -38,4 +38,7 @@ internal sealed class HangfireSyncJobScheduler(IBackgroundJobClient jobs) : ISyn
 
     public void EnqueueScheduledSync(Guid consentId) =>
         jobs.Enqueue<SyncJobs>(j => j.ScheduledSyncAsync(consentId, CancellationToken.None));
+
+    public void EnqueueEventProcessing(Guid inboxId) =>
+        jobs.Enqueue<EventJobs>(j => j.ProcessAsync(inboxId, CancellationToken.None));
 }

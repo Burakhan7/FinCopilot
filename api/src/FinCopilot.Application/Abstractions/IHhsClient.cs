@@ -21,6 +21,9 @@ public interface IHhsClient
     /// <summary>İzin 03.</summary>
     Task<IReadOnlyList<HhsBalance>> GetBalancesAsync(HhsAccess access, CancellationToken ct);
 
+    /// <summary>İzin 03, tek hesap (GET /hesaplar/{hspRef}/bakiye). /bakiye'den ayrı yol olduğu için kotası ayrı sayılır.</summary>
+    Task<HhsBalance> GetBalanceAsync(HhsAccess access, string hspRef, CancellationToken ct);
+
     /// <summary>
     /// İzin 04 (+05 ile amaç kodu, açıklama ve karşı taraf). Pencere: kullanıcı tetikli ≤1 ay, sistem tetikli ≤24 saat.
     /// Tek sayfa döner; sistem tetikli sorguda her sayfa günlük kotadan düşer.
@@ -35,7 +38,18 @@ public interface IHhsClient
 
     /// <summary>İzin 09; pencere kuralları işlemlerle aynı.</summary>
     Task<HhsPage<HhsCardTransaction>> GetCardTransactionsAsync(HhsAccess access, string kartRef, HhsWindow window, int page, int pageSize, CancellationToken ct);
+
+    // ---- Olay aboneliği (banka başına tek abonelik)
+
+    /// <summary>Yoksa null.</summary>
+    Task<HhsSubscription?> GetSubscriptionAsync(string hhsKod, CancellationToken ct);
+    Task<HhsSubscription> CreateSubscriptionAsync(string hhsKod, IReadOnlyList<HhsEventType> types, CancellationToken ct);
+    Task<HhsSubscription> UpdateSubscriptionAsync(string hhsKod, string olayAbonelikNo, IReadOnlyList<HhsEventType> types, CancellationToken ct);
 }
+
+public sealed record HhsEventType(string OlayTipi, string KaynakTipi);
+
+public sealed record HhsSubscription(string OlayAbonelikNo, IReadOnlyList<HhsEventType> Types);
 
 /// <param name="PsuInitiated">true: kullanıcı tetikli (E), false: sistem tetikli (H, günde 4 kota).</param>
 public sealed record HhsAccess(string HhsKod, string AccessToken, bool PsuInitiated);
@@ -120,6 +134,7 @@ public sealed record HhsCardTransaction(
     int? TaksitSayisi,
     HhsFx? Doviz);
 
+/// <param name="Decoupled">true: ayrık GKD (yetYntm=A, kullanıcı TCKN ile bankanın kendi uygulamasında onaylar).</param>
 public sealed record HhsConsentRequest(
     string HhsKod,
     string Tckn,
@@ -127,8 +142,13 @@ public sealed record HhsConsentRequest(
     DateTimeOffset ErisimIzniSonTrh,
     DateTimeOffset HesapIslemBslZmn,
     DateTimeOffset HesapIslemBtsZmn,
-    string YonAdr);
+    string YonAdr,
+    bool Decoupled = false);
 
+/// <param name="YetKod">
+/// Ayrık GKD onaylanınca (durum Y) rıza sorgusunda dönen yetki kodu.
+/// ⚠ Mock HHS davranışı (gkd.yetKod); spesifikasyondan doğrulanmalı (README).
+/// </param>
 public sealed record HhsConsent(
     string RizaNo,
     string RizaDrm,
@@ -137,7 +157,8 @@ public sealed record HhsConsent(
     IReadOnlyList<string> IzinTurleri,
     DateTimeOffset ErisimIzniSonTrh,
     DateTimeOffset? HesapIslemBslZmn,
-    DateTimeOffset? HesapIslemBtsZmn);
+    DateTimeOffset? HesapIslemBtsZmn,
+    string? YetKod = null);
 
 public sealed record HhsToken(string AccessToken, TimeSpan AccessLifetime, string RefreshToken, TimeSpan RefreshLifetime);
 

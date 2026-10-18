@@ -24,7 +24,7 @@ public class SyncTests(ApiFactory factory)
     /// Örnek banka verisi: 2 hesap (biri KMH'de), 12 ay boyunca işlem (bir pencerede 130 işlem → sayfalama),
     /// bir kredi kartı (ekstre, taksit, döviz, iade) ve bir banka kartı.
     /// </summary>
-    private static FakeHhsClient.BankData SampleData(DateTimeOffset now)
+    internal static FakeHhsClient.BankData SampleData(DateTimeOffset now)
     {
         HhsTransaction Tx(string no, DateTimeOffset at, decimal amount, string brcAlc = "B", string? amc = null, string desc = "MARKET") =>
             new(no, "R" + no, amount, "TRY", at, "D", brcAlc, "UYE_ISYERI_ISLEMLERI", amc, desc, null, null, null);
@@ -75,7 +75,7 @@ public class SyncTests(ApiFactory factory)
     {
         var client = await factory.RegisteredClientWithTcknAsync();
         var created = await (await client.PostAsJsonAsync("/consents", new { hhsKod = ApiFactory.TestBankCode })).Content.ReadFromJsonAsync<CreateConsentResult>();
-        var uri = new Uri(created!.GkdUrl);
+        var uri = new Uri(created!.GkdUrl!);
         var rizaNo = uri.AbsolutePath.Split('/').Last();
         var bank = factory.Hhs.Consents[rizaNo];
         bank.Data = SampleData(DateTimeOffset.UtcNow);

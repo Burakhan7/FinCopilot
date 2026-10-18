@@ -23,7 +23,7 @@ public class ConsentFlowTests(ApiFactory factory)
         Assert.Equal(HttpStatusCode.Created, res.StatusCode);
         var body = (await res.Content.ReadFromJsonAsync<CreateConsentResult>())!;
 
-        var uri = new Uri(body.GkdUrl);
+        var uri = new Uri(body.GkdUrl!);
         var rizaNo = uri.AbsolutePath.Split('/').Last();
         var drmKod = QueryHelpers.ParseQuery(uri.Query)["drmKod"].ToString();
         Assert.False(string.IsNullOrEmpty(drmKod));

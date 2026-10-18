@@ -44,6 +44,9 @@ Spesifikasyondan henüz doğrulanamayan ve varsayımla ilerlenen noktalar:
 - **İşlem listesi dizi adı:** Mock HHS `isller` kullanıyor (`{"hspRef", "isller": [...]}`); spesifikasyondaki adla karşılaştırılmalı.
 - **Sayfalama başlıkları:** `X-Total-Count` / `X-Total-Pages` mock varsayımı; sistem tetikli sorguda her sayfanın kotadan düşüp düşmediği spesifikasyondan doğrulanmalı (mock'ta düşüyor).
 - **Hata yanıtı gövdesi:** Mock HHS `errorCode` / `moreInformationTr` kullanıyor; spesifikasyondaki hata nesnesiyle karşılaştırılmalı (`mock-hhs/app/errors.py`).
+- **Sistem tetikli kota kapsamı:** Mock HHS günde 4 sorguyu *yol başına* sayıyor (`/bakiye`, `/hesaplar/{ref}/bakiye`, `/hesaplar/{ref}/islemler` ayrı). Backend buna göre tasarlandı (BAKIYE olayında `/hesaplar/{ref}/bakiye` kullanılır); spesifikasyonda kotanın rıza başına mı yol başına mı olduğu doğrulanmalı.
+- **Ayrık GKD'de yetKod'un iletimi:** Mock HHS, onaydan sonra yetKod'u rıza sorgusunda (`gkd.yetKod`) döndürüyor. Spesifikasyondaki yöntem doğrulanmalı.
+- **Olay gövdesi ve imza:** `POST /olay-dinleme` gövdesi Mock HHS'nin gönderdiği alanlara göre (`olayNo, olayAbonelikNo, olayTipi, kaynakTipi, kaynakNo, olayZamani, katilimciBlg`). `POST /sistem-olay-dinleme` gövdesi bilinmiyor (sadece saklanıyor). Gerçek ortamda `X-JWS-Signature` doğrulaması eklenmeli.
 - **v2.0.1 farkları:** Sitede v2.0.1 yayınlanmış; v2.0.0 ile farkları kontrol edilmeli.
 
 ## Not

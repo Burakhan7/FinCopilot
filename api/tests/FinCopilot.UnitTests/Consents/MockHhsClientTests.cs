@@ -143,6 +143,64 @@ public class MockHhsClientTests
     }
 
     [Fact]
+    public async Task Decoupled_consent_sends_ayrik_gkd_and_reads_yet_kod()
+    {
+        // mock-hhs: ayrık GKD onaylanınca rıza sorgusunda gkd.yetKod döner, hhsYonAdr dönmez.
+        var (sut, handler) = Create(HttpStatusCode.Created, ConsentResponse
+            .Replace("\"yetYntm\":\"Y\"", "\"yetYntm\":\"A\"")
+            .Replace("\"hhsYonAdr\":\"http://hhs.test/gkd/r-1\"", "\"ayrikGkd\":{\"ohkTanimTip\":\"TCKN\",\"ohkTanimDeger\":\"10000000214\"},\"yetKod\":\"yet-9\"")
+            .Replace("\"rizaDrm\":\"B\"", "\"rizaDrm\":\"Y\""));
+        var son = DateTimeOffset.UtcNow.AddDays(180);
+
+        var result = await sut.CreateConsentAsync(new HhsConsentRequest(
+            "9001", "10000000214", ["01"], son, son.AddDays(-545), son, "fincopilot://gkd-donus", Decoupled: true), default);
+
+        var gkd = JsonNode.Parse(handler.RequestBody!)!["gkd"]!;
+        Assert.Equal("A", (string?)gkd["yetYntm"]);
+        Assert.Equal("TCKN", (string?)gkd["ayrikGkd"]!["ohkTanimTip"]);
+        Assert.Equal("10000000214", (string?)gkd["ayrikGkd"]!["ohkTanimDeger"]);
+        Assert.Null(gkd["yetKod"]);
+        Assert.Equal("yet-9", result.YetKod);
+        Assert.Null(result.HhsYonAdr);
+    }
+
+    [Fact]
+    public async Task Subscription_create_sends_types_and_missing_subscription_is_null()
+    {
+        var (sut, handler) = Create(HttpStatusCode.Created, """
+            {"olayAbonelikNo":"s-1","olusturmaZamani":"2026-10-18T10:00:00+03:00","guncellemeZamani":"2026-10-18T10:00:00+03:00",
+             "katilimciBlg":{"hhsKod":"9001","yosKod":"8001"},
+             "abonelikTipleri":[{"olayTipi":"KAYNAK_GUNCELLENDI","kaynakTipi":"BAKIYE"}]}
+            """);
+
+        var sub = await sut.CreateSubscriptionAsync("9001", [new HhsEventType("KAYNAK_GUNCELLENDI", "BAKIYE")], default);
+
+        Assert.Equal("http://hhs.test/v2/olay-abonelik", handler.Request!.RequestUri!.ToString());
+        var body = JsonNode.Parse(handler.RequestBody!)!;
+        Assert.Equal("8001", (string?)body["katilimciBlg"]!["yosKod"]);
+        Assert.Equal("BAKIYE", (string?)body["abonelikTipleri"]![0]!["kaynakTipi"]);
+        Assert.Equal(new HhsEventType("KAYNAK_GUNCELLENDI", "BAKIYE"), Assert.Single(sub.Types));
+        Assert.Equal("s-1", sub.OlayAbonelikNo);
+
+        var (missing, _) = Create(HttpStatusCode.NotFound,
+            """{"httpCode":404,"errorCode":"TR.OHVPS.Resource.NotFound","moreInformationTr":"Olay aboneliği bulunamadı."}""");
+        Assert.Null(await missing.GetSubscriptionAsync("9001", default));
+    }
+
+    [Fact]
+    public async Task Single_account_balance_uses_its_own_path()
+    {
+        var (sut, handler) = Create(HttpStatusCode.OK,
+            """{"hspRef":"A1","bky":{"bkyTtr":"36000.50","blkTtr":"0.00","prBrm":"TRY","bkyZmn":"2026-10-18T10:00:00+03:00"}}""");
+
+        var b = await sut.GetBalanceAsync(new HhsAccess("9001", "t", false), "A1", default);
+
+        Assert.Equal("/v2/hesaplar/A1/bakiye", handler.Request!.RequestUri!.AbsolutePath);
+        Assert.Equal("H", handler.Request.Headers.GetValues("PSU-Initiated").Single());
+        Assert.Equal(36000.50m, b.BkyTtr);
+    }
+
+    [Fact]
     public void Serializer_uses_ohvps_names() =>
         Assert.Contains("\"erisimBelirteci\"", JsonSerializer.Serialize(
             new { ErisimBelirteci = "x" }, MockHhsClient.Json));

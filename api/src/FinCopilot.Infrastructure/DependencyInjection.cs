@@ -59,17 +59,28 @@ public static class DependencyInjection
             .UseRecommendedSerializerSettings()
             .UseSqlServerStorage(connectionString));
         services.AddScoped<SyncJobs>();
+        services.AddScoped<EventJobs>();
+        services.AddScoped<MaintenanceJobs>();
         services.AddSingleton<ISyncJobScheduler, HangfireSyncJobScheduler>();
 
         return services;
     }
 
-    /// <summary>Zamanlı senkronu Hangfire'a kaydeder (Worker açılışında).</summary>
-    public static void RegisterRecurringJobs(IServiceProvider services) =>
-        services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<SyncJobs>(
-            SyncJobs.ScheduledSyncRecurringId,
-            j => j.ScheduleAllAsync(CancellationToken.None),
-            SyncJobs.ScheduledSyncCron,
-            // Hangfire saat dilimini ID ile saklayıp tekrar çözer: sistemde kayıtlı bir ID olmalı (IANA, Windows'ta da çalışır).
-            new RecurringJobOptions { TimeZone = TimeZoneInfo.FindSystemTimeZoneById(SyncJobs.TimeZoneId) });
+    /// <summary>Tekrarlayan işleri kaydeder ve abonelikleri hemen kontrol ettirir (Worker açılışında).</summary>
+    public static void RegisterRecurringJobs(IServiceProvider services)
+    {
+        var recurring = services.GetRequiredService<IRecurringJobManager>();
+        // Hangfire saat dilimini ID ile saklayıp tekrar çözer: sistemde kayıtlı bir ID olmalı (IANA, Windows'ta da çalışır).
+        var options = new RecurringJobOptions { TimeZone = TimeZoneInfo.FindSystemTimeZoneById(SyncJobs.TimeZoneId) };
+
+        recurring.AddOrUpdate<SyncJobs>(SyncJobs.ScheduledSyncRecurringId,
+            j => j.ScheduleAllAsync(CancellationToken.None), SyncJobs.ScheduledSyncCron, options);
+        recurring.AddOrUpdate<MaintenanceJobs>(MaintenanceJobs.EnsureSubscriptionsId,
+            j => j.EnsureSubscriptionsAsync(CancellationToken.None), MaintenanceJobs.EnsureSubscriptionsCron, options);
+        recurring.AddOrUpdate<MaintenanceJobs>(MaintenanceJobs.ConsentMaintenanceId,
+            j => j.ConsentMaintenanceAsync(CancellationToken.None), MaintenanceJobs.ConsentMaintenanceCron, options);
+
+        services.GetRequiredService<IBackgroundJobClient>()
+            .Enqueue<MaintenanceJobs>(j => j.EnsureSubscriptionsAsync(CancellationToken.None));
+    }
 }

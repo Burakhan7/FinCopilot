@@ -26,13 +26,17 @@ public sealed class ListConsentsHandler(IAppDbContext db) : IRequestHandler<List
 /// <summary>Tek bağlantı; aktifse durumu HHS'den tazelenir.</summary>
 public sealed record GetConsentQuery(Guid UserId, Guid ConsentId) : IRequest<ConsentDto>;
 
-public sealed class GetConsentHandler(IAppDbContext db, ConsentService consents) : IRequestHandler<GetConsentQuery, ConsentDto>
+/// <remarks>Ayrık GKD'de olay gelmezse (veya gecikirse) bağlantı burada tamamlanır.</remarks>
+public sealed class GetConsentHandler(IAppDbContext db, ConsentService consents, ISyncJobScheduler jobs)
+    : IRequestHandler<GetConsentQuery, ConsentDto>
 {
     public async Task<ConsentDto> Handle(GetConsentQuery request, CancellationToken ct)
     {
         var consent = await consents.GetOwnedAsync(request.UserId, request.ConsentId, ct);
-        await consents.SyncStatusAsync(consent, ct);
+        var connected = await consents.SyncStatusAsync(consent, ct);
         await db.SaveChangesAsync(ct);
+        if (connected)
+            jobs.EnqueueBackfill(consent.Id);
         return await consents.ToDtoAsync(consent, ct);
     }
 }

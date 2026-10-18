@@ -64,6 +64,21 @@ Mobil olmadan denemek için: `$env:Hhs__RedirectUri="http://localhost:8090/_mock
 | `GET /accounts` | Aktif hesaplar, maskeli IBAN ve son bakiye |
 | `GET /cards` | Aktif kartlar; kredi kartında son ekstre |
 
+## Olaylar ve ayrık GKD
+| Uç (anonim, HHS çağırır) | Açıklama |
+|---|---|
+| `POST /olay-dinleme` | `yosKod`/`hhsKod` doğrulanır, `event_inbox`'a `olayNo` ile tekil yazılır, **202**; işleme Worker'da |
+| `POST /sistem-olay-dinleme` | Kaydedilir, 202 (işlenmez) |
+
+- `KAYNAK_GUNCELLENDI/BAKIYE` (kaynakNo = hspRef) → sadece o hesabın bakiyesi (`GET /hesaplar/{ref}/bakiye`, `source=event`), rıza başına günde ≤4; işlemler sıradaki zamanlı senkronda.
+- `KAYNAK_GUNCELLENDI/HESAP_BILGISI_RIZASI`, `AYRIK_GKD_BASARISIZ` → rıza durumu HHS'den tazelenir.
+- `AYRIK_GKD_BASARILI` → rıza sorgusundan yetKod → token → `K` → ilk yükleme.
+- Ayrık GKD: `POST /consents {hhsKod, gkdYontem: "A"}` → `gkdUrl` yok; kullanıcı bankanın uygulamasında onaylar. Olay kaçarsa `GET /consents/{id}` aynı tamamlamayı yapar. Banka `SupportsDecoupled` değilse `400 decoupled_not_supported`.
+- Olay abonelikleri: Worker açılışında ve her gün 02:00 (banka başına GET → POST/PUT).
+- Rıza bakımı her gün 03:00: süresi geçen → `S`; 1 saattir B/Y'de kalan → HHS'den tazelenir; 7 gün içinde bitecek → `alerts` (`consent_expiring`, tekil).
+
+Mock HHS'nin olayları Api'ye göndermesi için: `$env:MOCK_HHS_YOS_EVENT_URL="http://localhost:8080/olay-dinleme"` ile başlat.
+
 ## Yapılandırma
 Worker da `Hhs` bölümüne (YÖS kodu + banka adresleri) ihtiyaç duyar; Api ile aynı olmalı (`src/FinCopilot.Worker/appsettings.Development.json`).
 

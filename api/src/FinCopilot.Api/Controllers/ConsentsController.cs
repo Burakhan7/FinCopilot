@@ -21,7 +21,8 @@ public sealed class BanksController(ISender mediator) : ControllerBase
 [Route("consents")]
 public sealed class ConsentsController(ISender mediator) : ControllerBase
 {
-    public sealed record CreateConsentRequest(string HhsKod);
+    /// <param name="GkdYontem">Y: banka sayfasına yönlendirme (varsayılan), A: bankanın kendi uygulamasından onay.</param>
+    public sealed record CreateConsentRequest(string HhsKod, string? GkdYontem);
 
     /// <summary>Bankanın deep link ile döndürdüğü parametreler (yetKod sadece onayda gelir).</summary>
     public sealed record GkdCallbackRequest(string RizaNo, string DrmKod, string? YetKod);
@@ -37,7 +38,7 @@ public sealed class ConsentsController(ISender mediator) : ControllerBase
     [HttpPost]
     public async Task<ActionResult<CreateConsentResult>> Create(CreateConsentRequest request, CancellationToken ct)
     {
-        var result = await mediator.Send(new CreateConsentCommand(User.GetUserId(), request.HhsKod), ct);
+        var result = await mediator.Send(new CreateConsentCommand(User.GetUserId(), request.HhsKod, request.GkdYontem ?? "Y"), ct);
         return CreatedAtAction(nameof(Get), new { id = result.ConsentId }, result);
     }
 

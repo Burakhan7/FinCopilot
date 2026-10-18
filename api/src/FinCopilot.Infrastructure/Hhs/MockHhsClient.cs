@@ -30,9 +30,12 @@ internal sealed class MockHhsClient(HttpClient http, IOptions<HhsOptions> option
 
     public async Task<HhsConsent> CreateConsentAsync(HhsConsentRequest r, CancellationToken ct)
     {
+        var gkd = r.Decoupled
+            ? new Gkd("A", r.YonAdr, AyrikGkd: new AyrikGkd("TCKN", r.Tckn))
+            : new Gkd("Y", r.YonAdr);
         var body = new HesapBilgisiRizasiIstegi(
             new KatilimciBlg(r.HhsKod, _o.YosKod),
-            new Gkd("Y", r.YonAdr),
+            gkd,
             new Kmlk("K", r.Tckn, "B"),
             new HspBlg(new IznBlg(r.IzinTurleri, r.ErisimIzniSonTrh, r.HesapIslemBslZmn, r.HesapIslemBtsZmn)));
 
@@ -70,6 +73,12 @@ internal sealed class MockHhsClient(HttpClient http, IOptions<HhsOptions> option
         (await SendAsync<List<Bakiye>>(Data(access, "bakiye"), ct))!.Select(b => new HhsBalance(
             b.HspRef, b.Bky.BkyTtr, b.Bky.BlkTtr, b.Bky.PrBrm, b.Bky.BkyZmn, b.KrdHsp?.KulKrdTtr, b.KrdHsp?.KrdDhlGstr)).ToList();
 
+    public async Task<HhsBalance> GetBalanceAsync(HhsAccess access, string hspRef, CancellationToken ct)
+    {
+        var b = (await SendAsync<Bakiye>(Data(access, $"hesaplar/{Esc(hspRef)}/bakiye"), ct))!;
+        return new HhsBalance(b.HspRef, b.Bky.BkyTtr, b.Bky.BlkTtr, b.Bky.PrBrm, b.Bky.BkyZmn, b.KrdHsp?.KulKrdTtr, b.KrdHsp?.KrdDhlGstr);
+    }
+
     public async Task<HhsPage<HhsTransaction>> GetTransactionsAsync(
         HhsAccess access, string hspRef, HhsWindow window, int page, int pageSize, CancellationToken ct)
     {
@@ -106,6 +115,33 @@ internal sealed class MockHhsClient(HttpClient http, IOptions<HhsOptions> option
             m.UyeIsyeri, m.ReferansNo, m.TaksitSayisi,
             m.DovizBilgisi is { } fx ? new HhsFx(fx.OrijinalTutar, fx.OrijinalParaBirimi, fx.Kur) : null)).ToList(), total, pages);
     }
+
+    // ------------------------------------------------------------------ olay aboneliği
+
+    public async Task<HhsSubscription?> GetSubscriptionAsync(string hhsKod, CancellationToken ct)
+    {
+        try
+        {
+            return Map((await SendAsync<OlayAbonelik>(new(hhsKod, HttpMethod.Get, "olay-abonelik"), ct))!);
+        }
+        catch (HhsException e) when (e.StatusCode == 404)
+        {
+            return null;
+        }
+    }
+
+    public async Task<HhsSubscription> CreateSubscriptionAsync(string hhsKod, IReadOnlyList<HhsEventType> types, CancellationToken ct) =>
+        Map((await SendAsync<OlayAbonelik>(new(hhsKod, HttpMethod.Post, "olay-abonelik") { Body = SubscriptionBody(hhsKod, types) }, ct))!);
+
+    public async Task<HhsSubscription> UpdateSubscriptionAsync(string hhsKod, string olayAbonelikNo, IReadOnlyList<HhsEventType> types, CancellationToken ct) =>
+        Map((await SendAsync<OlayAbonelik>(
+            new(hhsKod, HttpMethod.Put, $"olay-abonelik/{Esc(olayAbonelikNo)}") { Body = SubscriptionBody(hhsKod, types) }, ct))!);
+
+    private OlayAbonelikIstegi SubscriptionBody(string hhsKod, IReadOnlyList<HhsEventType> types) =>
+        new(new KatilimciBlg(hhsKod, _o.YosKod), types.Select(t => new AbonelikTipi(t.OlayTipi, t.KaynakTipi)).ToList());
+
+    private static HhsSubscription Map(OlayAbonelik a) =>
+        new(a.OlayAbonelikNo, a.AbonelikTipleri.Select(t => new HhsEventType(t.OlayTipi, t.KaynakTipi)).ToList());
 
     // ------------------------------------------------------------------ HTTP
 
@@ -189,5 +225,5 @@ internal sealed class MockHhsClient(HttpClient http, IOptions<HhsOptions> option
     private static HhsConsent Map(HesapBilgisiRizasi r) => new(
         r.RzBlg.RizaNo, r.RzBlg.RizaDrm, r.RzBlg.RizaIptDtyKod, r.Gkd.HhsYonAdr,
         r.HspBlg.IznBlg.IznTur, r.HspBlg.IznBlg.ErisimIzniSonTrh,
-        r.HspBlg.IznBlg.HesapIslemBslZmn, r.HspBlg.IznBlg.HesapIslemBtsZmn);
+        r.HspBlg.IznBlg.HesapIslemBslZmn, r.HspBlg.IznBlg.HesapIslemBtsZmn, r.Gkd.YetKod);
 }

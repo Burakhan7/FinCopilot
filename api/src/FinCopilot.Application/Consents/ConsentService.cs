@@ -2,6 +2,7 @@ using FinCopilot.Application.Abstractions;
 using FinCopilot.Application.Common;
 using FinCopilot.Domain.Consents;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace FinCopilot.Application.Consents;
 
@@ -11,6 +12,7 @@ public sealed record ConsentDto(
     string BankName,
     string RizaDrm,
     string Durum,
+    string GkdYontem,
     string? RizaIptDtyKod,
     string? IptalNedeni,
     IReadOnlyList<string> IzinTurleri,
@@ -25,7 +27,12 @@ public sealed record ConsentDto(
 public sealed record LastSyncDto(string Kind, string Status, DateTimeOffset StartedAt, DateTimeOffset? FinishedAt);
 
 /// <summary>Rıza işlemlerinin ortak parçaları. Kaydetmek (SaveChanges) çağıranın işidir.</summary>
-public sealed class ConsentService(IAppDbContext db, IHhsClient hhs, ISecretProtector protector, TimeProvider clock)
+public sealed class ConsentService(
+    IAppDbContext db,
+    IHhsClient hhs,
+    ISecretProtector protector,
+    TimeProvider clock,
+    ILogger<ConsentService> logger)
 {
     /// <summary>Erişim belirtecinin bitmesine bu kadar kala yenilenir.</summary>
     private static readonly TimeSpan RefreshSkew = TimeSpan.FromMinutes(1);
@@ -34,15 +41,44 @@ public sealed class ConsentService(IAppDbContext db, IHhsClient hhs, ISecretProt
         await db.Consents.Include(c => c.Token).FirstOrDefaultAsync(c => c.Id == consentId && c.UserId == userId, ct)
         ?? throw new AppProblemException(404, "consent_not_found", "Banka bağlantısı bulunamadı.");
 
-    /// <summary>Durumu HHS'den okur (bankadan iptal, süre aşımı gibi değişiklikler için).</summary>
-    public async Task SyncStatusAsync(Consent consent, CancellationToken ct)
+    /// <summary>
+    /// Durumu HHS'den okur (bankadan iptal, süre aşımı gibi değişiklikler için). Ayrık GKD'de kullanıcı bankanın
+    /// uygulamasında onaylamışsa (Y + yetKod) token alınıp bağlantı tamamlanır.
+    /// </summary>
+    /// <returns>Bu çağrıda bağlantı kurulduysa (→ K) true: çağıran kaydettikten sonra ilk yüklemeyi kuyruğa atmalı.</returns>
+    public async Task<bool> SyncStatusAsync(Consent consent, CancellationToken ct)
     {
         if (consent.RizaNo is null || !consent.IsActive)
-            return;
+            return false;
 
         var remote = await hhs.GetConsentAsync(consent.HhsKod, consent.RizaNo, ct);
         consent.ErisimIzniSonTrh = remote.ErisimIzniSonTrh;
+
+        if (consent.GkdYontem == "A" && remote.RizaDrm == RizaDurumu.Yetkilendirildi && remote.YetKod is not null
+            && consent.RizaDrm is RizaDurumu.YetkiBekleniyor or RizaDurumu.Yetkilendirildi)
+            return await CompleteDecoupledAsync(consent, remote.YetKod, ct);
+
         await ApplyStatusAsync(consent, remote.RizaDrm, remote.RizaIptDtyKod, ct);
+        return false;
+    }
+
+    private async Task<bool> CompleteDecoupledAsync(Consent consent, string yetKod, CancellationToken ct)
+    {
+        HhsToken token;
+        try
+        {
+            token = await hhs.ExchangeAuthCodeAsync(consent.HhsKod, consent.RizaNo!, yetKod, ct);
+        }
+        catch (HhsException e) when (e.StatusCode == 401)
+        {
+            // Aynı yetKod'u başka bir süreç (olay işleyici / GET) az önce kullandı; o süreç bağlantıyı tamamlar.
+            logger.LogInformation("Ayrık GKD yetKod'u zaten kullanılmış: rıza {ConsentId}", consent.Id);
+            return false;
+        }
+
+        StoreTokens(consent, token);
+        await ApplyStatusAsync(consent, RizaDurumu.YetkiKullanildi, null, ct);
+        return true;
     }
 
     public async Task ApplyStatusAsync(Consent consent, string drm, string? iptalKodu, CancellationToken ct)
@@ -104,7 +140,7 @@ public sealed class ConsentService(IAppDbContext db, IHhsClient hhs, ISecretProt
     }
 
     public static ConsentDto ToDto(Consent c, string bankName, LastSyncDto? lastSync) => new(
-        c.Id, c.HhsKod, bankName, c.RizaDrm, RizaDurumu.Aciklama(c.RizaDrm),
+        c.Id, c.HhsKod, bankName, c.RizaDrm, RizaDurumu.Aciklama(c.RizaDrm), c.GkdYontem,
         c.RizaIptDtyKod, c.RizaIptDtyKod is null ? null : RizaIptalKodu.Aciklama(c.RizaIptDtyKod),
         c.IzinTurleri, c.ErisimIzniSonTrh, c.CreatedAt, c.UpdatedAt, lastSync);
 

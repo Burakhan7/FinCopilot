@@ -28,25 +28,45 @@ public sealed class SyncService(
     public static readonly TimeSpan PsuWindow = TimeSpan.FromDays(30);
     public static readonly TimeSpan SystemWindow = TimeSpan.FromHours(24);
 
-    public Task<string> BackfillAsync(Guid consentId, CancellationToken ct) => RunAsync(consentId, SyncKind.Backfill, ct);
+    public Task<string> BackfillAsync(Guid consentId, CancellationToken ct) =>
+        RunAsync(consentId, SyncKind.Backfill, (s, start, end) => FetchAsync(s, start, end, ct), ct);
 
-    public Task<string> ScheduledSyncAsync(Guid consentId, CancellationToken ct) => RunAsync(consentId, SyncKind.Scheduled, ct);
+    public Task<string> ScheduledSyncAsync(Guid consentId, CancellationToken ct) =>
+        RunAsync(consentId, SyncKind.Scheduled, (s, start, end) => FetchAsync(s, start, end, ct), ct);
+
+    /// <summary>
+    /// BAKIYE olayı: sadece o hesabın bakiyesi (GET /hesaplar/{hspRef}/bakiye). Zamanlı senkronun kullandığı
+    /// /bakiye ve /islemler kotalarına dokunmaz; işlemler bir sonraki zamanlı senkronda gelir.
+    /// </summary>
+    public Task<string> EventBalanceAsync(Guid consentId, string hspRef, CancellationToken ct) =>
+        RunAsync(consentId, SyncKind.Event, async (s, _, _) =>
+        {
+            var account = await db.Accounts.FirstOrDefaultAsync(a => a.ConsentId == consentId && a.HspRef == hspRef && a.IsActive, ct);
+            if (account is null || !s.Consent.IzinTurleri.Contains("03"))
+                return;
+            var balance = await CallAsync(s, a => hhs.GetBalanceAsync(a, hspRef, ct), ct);
+            await writer.InsertBalancesAsync([account], [balance], "event", ct);
+        }, ct);
 
     /// <summary>Zamanlı senkrona girecek rızalar: bağlı (K) ve token'ı olanlar.</summary>
     public async Task<IReadOnlyList<Guid>> ActiveConsentIdsAsync(CancellationToken ct) =>
         await db.Consents.Where(c => c.RizaDrm == RizaDurumu.YetkiKullanildi && c.Token != null).Select(c => c.Id).ToListAsync(ct);
 
-    /// <summary>Bugün (TR) bu rıza için HHS'ye giden sistem tetikli çalıştırma sayısı.</summary>
-    public async Task<int> SystemRunsTodayAsync(Guid consentId, CancellationToken ct)
+    /// <summary>
+    /// Bugün (TR) bu rıza için bu türde HHS'ye giden sistem tetikli çalıştırma sayısı.
+    /// Zamanlı ve olay senkronları farklı HHS yollarını kullandığı için ayrı sayılır.
+    /// </summary>
+    public async Task<int> SystemRunsTodayAsync(Guid consentId, string kind, CancellationToken ct)
     {
         var dayStart = TurkeyTime.StartOfDay(clock.GetUtcNow());
         return await db.SyncJobs.CountAsync(j =>
-            j.ConsentId == consentId && j.PsuInitiated == "H" && j.StartedAt >= dayStart
+            j.ConsentId == consentId && j.Resource == kind && j.PsuInitiated == "H" && j.StartedAt >= dayStart
             // Yerelde kota yüzünden hiç denenmeyenler (HTTP kodu yok) sayılmaz.
             && !(j.Status == SyncStatus.Quota && j.HttpStatus == null), ct);
     }
 
-    private async Task<string> RunAsync(Guid consentId, string kind, CancellationToken ct)
+    private async Task<string> RunAsync(
+        Guid consentId, string kind, Func<Session, DateTimeOffset, DateTimeOffset, Task> work, CancellationToken ct)
     {
         var consent = await db.Consents.Include(c => c.Token).FirstOrDefaultAsync(c => c.Id == consentId, ct);
         if (consent is null || consent.RizaDrm != RizaDurumu.YetkiKullanildi || consent.Token is null)
@@ -64,13 +84,13 @@ public sealed class SyncService(
             ConsentId = consent.Id,
             Resource = kind,
             PsuInitiated = psu ? "E" : "H",
-            WindowStart = start,
-            WindowEnd = end,
+            WindowStart = kind == SyncKind.Event ? null : start,
+            WindowEnd = kind == SyncKind.Event ? null : end,
             Status = SyncStatus.Running,
             StartedAt = now,
         };
 
-        if (!psu && await SystemRunsTodayAsync(consent.Id, ct) >= DailySystemQuota)
+        if (!psu && await SystemRunsTodayAsync(consent.Id, kind, ct) >= DailySystemQuota)
         {
             job.Status = SyncStatus.Quota;
             job.FinishedAt = now;
@@ -86,7 +106,7 @@ public sealed class SyncService(
         try
         {
             var session = new Session(consent, psu, await consents.GetAccessTokenAsync(consent, ct));
-            await FetchAsync(session, start, end, ct);
+            await work(session, start, end);
             job.Status = SyncStatus.Succeeded;
         }
         catch (HhsException e) when (e.IsRateExceeded)

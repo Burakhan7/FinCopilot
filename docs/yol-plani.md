@@ -42,6 +42,10 @@ Varsayımlar: Ekim 2026 – Haziran 2027, bitirme teslimi Haziran 2027. Güz dö
 | İlk yükleme | Hangfire işi; Api kuyruğa atar, Worker yürütür | 18.10.2026 |
 | Zamanlı senkron | Günde 4 sabit saat: 00/06/12/18 (TR) | 18.10.2026 |
 | Senkron hataları | Sınıflandırılmış: ağ/5xx → 3 deneme; 401 → token yenile + 1 tekrar; kota/iptal/4xx → tekrar yok | 18.10.2026 |
+| BAKIYE olayı | Sadece o hesabın bakiyesi (`/hesaplar/{ref}/bakiye`, ayrı kota); işlemler zamanlı senkronda | 18.10.2026 |
+| Olay ucu güvenliği | Anonim + yosKod/hhsKod doğrulaması; içerik güvenilmez, veri HHS'den okunur (gerçekte JWS) | 18.10.2026 |
+| Olay aboneliği | Worker açılışında + her gün 02:00 | 18.10.2026 |
+| Rıza süre dolumu | Her gün 03:00: dolanlar S; 7 gün kala `consent_expiring` uyarısı | 18.10.2026 |
 
 Not: Teknoloji ve mimari kararları Burakhan verir; yeni bir karar gerektiğinde seçenekler sunulur.
 

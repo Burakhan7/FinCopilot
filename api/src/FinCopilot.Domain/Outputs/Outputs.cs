@@ -1,5 +1,11 @@
 namespace FinCopilot.Domain.Outputs;
 
+public static class AlertType
+{
+    /// <summary>Banka bağlantısının (rızanın) süresi yakında doluyor.</summary>
+    public const string ConsentExpiring = "consent_expiring";
+}
+
 public class Alert
 {
     public Guid Id { get; set; }

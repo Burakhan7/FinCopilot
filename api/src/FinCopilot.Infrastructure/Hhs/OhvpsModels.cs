@@ -5,7 +5,11 @@ namespace FinCopilot.Infrastructure.Hhs;
 
 internal sealed record KatilimciBlg(string HhsKod, string YosKod);
 
-internal sealed record Gkd(string YetYntm, string YonAdr, string? HhsYonAdr = null);
+/// <param name="YetKod">Mock HHS: ayrık GKD onaylanınca rıza sorgusunda döner.</param>
+internal sealed record Gkd(string YetYntm, string YonAdr, string? HhsYonAdr = null, AyrikGkd? AyrikGkd = null, string? YetKod = null);
+
+/// <param name="OhkTanimTip">TCKN | MNO | YKN | PNO | GSM | IBAN</param>
+internal sealed record AyrikGkd(string OhkTanimTip, string OhkTanimDeger);
 
 internal sealed record Kmlk(string KmlkTur, string KmlkVrs, string OhkTur);
 
@@ -37,6 +41,14 @@ internal sealed record ErisimBelirteciYaniti(
     int YenilemeBelirteciGecerlilikSuresi);
 
 internal sealed record OhvpsHata(int? HttpCode, string? ErrorCode, string? MoreInformationTr);
+
+// ---- Olay aboneliği (/olay-abonelik)
+
+internal sealed record AbonelikTipi(string OlayTipi, string KaynakTipi);
+
+internal sealed record OlayAbonelikIstegi(KatilimciBlg KatilimciBlg, IReadOnlyList<AbonelikTipi> AbonelikTipleri);
+
+internal sealed record OlayAbonelik(string OlayAbonelikNo, IReadOnlyList<AbonelikTipi> AbonelikTipleri);
 
 // ---- Veri uçları. Tutarlar ÖHVPS'te string ("1234.50"); serileştirici string'den decimal okur.
 
