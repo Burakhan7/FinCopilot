@@ -33,7 +33,7 @@ Kullanıcının farklı bankalardaki hesap ve kart verilerini Açık Bankacılı
 
 ## Durum
 
-Faz 0 – Hazırlık (Ekim 2026). Ayrıntılar için [yol planı](docs/yol-plani.md).
+Faz 0 ✅ hazırlık · Faz 1 ✅ Mock HHS · Faz 2 backend ✅ (kayıt/giriş, banka bağlama, senkronizasyon, olaylar, uçtan uca testler); sırada mobil. Ayrıntılar için [yol planı](docs/yol-plani.md).
 
 ## Doğrulanması gerekenler
 

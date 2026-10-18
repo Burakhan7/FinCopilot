@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mock-hhs:
+    name: Mock HHS (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mock-hhs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12" # Dockerfile ile aynı
+          cache: pip
+          cache-dependency-path: mock-hhs/requirements.txt
+      - run: pip install -r requirements.txt
+      - run: pytest -q
+
+  api:
+    name: Backend (.NET)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: api/global.json
+      - run: dotnet restore api/FinCopilot.sln
+      - run: dotnet build api/FinCopilot.sln --no-restore -c Release
+
+      # Docker gerektirmez
+      - name: Birim testleri
+        run: dotnet test api/tests/FinCopilot.UnitTests --no-build -c Release --logger trx --results-directory TestResults
+
+      # Testcontainers: SQL Server 2022. Projeler sırayla: runner'da aynı anda birden çok SQL container'ı yavaşlatıyor.
+      - name: Entegrasyon testleri
+        run: dotnet test api/tests/FinCopilot.IntegrationTests --no-build -c Release --logger trx --results-directory TestResults
+
+      # Testcontainers: SQL Server + mock-hhs/Dockerfile'dan Mock HHS; Api gerçek Kestrel'de.
+      - name: Uçtan uca testler
+        run: dotnet test api/tests/FinCopilot.E2ETests --no-build -c Release --logger trx --results-directory TestResults
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results
+          path: TestResults

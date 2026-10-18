@@ -31,6 +31,7 @@ Bitirme projesi (Manisa Celal Bayar Üniv., teslim Haziran 2027). Geliştirici: 
 | Doğrulama | FluentValidation, MediatR `ValidationBehavior` ile |
 | Test | xUnit + Testcontainers (gerçek SQL Server 2022; Docker Desktop açık olmalı) |
 | Senkron | İlk yükleme Hangfire işi (Api kuyruğa atar, Worker yürütür). Zamanlı 4 sabit saat 00/06/12/18 TR. Hatalar sınıflandırılmış (ağ/5xx → 3 deneme; 401 → token yenile + 1; kota/iptal/4xx → tekrar yok). 5. adım 5a (motor) + 5b (olaylar) |
+| Uçtan uca test | xUnit + Testcontainers (Mock HHS imajı Dockerfile'dan), varsayılan `dotnet test` içinde; CI: GitHub Actions (push/PR, test projeleri sırayla) |
 | Olaylar | BAKIYE olayı → sadece o hesabın bakiyesi (`/hesaplar/{ref}/bakiye`, ayrı kota). `/olay-dinleme` anonim + doğrulama. Abonelik Worker açılışında + günlük. Rıza bakımı: dolanlar S + 7 gün kala `consent_expiring` uyarısı |
 | Rıza modülü | TCKN ilk banka bağlamada (`PUT /me/tckn`), arama özeti HMAC-SHA256 (`Security__TcknHashKey`). Banka listesi `Hhs:Banks` config → açılışta `banks`'e upsert. HHS HTTP: Microsoft.Extensions.Http.Resilience (retry sadece GET). İzinler 01–09 hepsi, süre 180 gün, geçmiş 365 gün. Ayrık GKD 5. adımda |
 | Geliştirme DB | Docker'da SQL Server 2022 (`docker-compose.yml`, sa şifresi `FinCopilot_Dev_2026!`) |
@@ -63,7 +64,9 @@ mobile/      Flutter (Faz 2 sonu – boş)
 4. ✅ `IHhsClient` adapter (MockHhsClient): rıza/token + 6 veri ucu (hesaplar, bakiye, işlemler, kartlar, kart-detay, kart-hareketleri), PSU-Initiated, sayfalama (`HhsPage`), kota hatası (`IsRateExceeded`). Sözleşme testleri gerçek Mock HHS yanıtlarından alınmış fixture'larla (`tests/FinCopilot.UnitTests/Hhs/Fixtures/`) — toplam 75 birim + 40 integration. `FakeHhsClient` veri uçları 5. adımda doldurulacak
 5a. ✅ Senkron motoru (`SyncService`, `BankDataWriter`, `SyncJobs`): ilk 12 ay yükleme (callback → Hangfire → Worker), zamanlı senkron 00/06/12/18 TR (günde ≤4, `sync_jobs`'tan), sınıflandırılmış hata/yeniden deneme, `GET /accounts`, `GET /cards`, `ConsentDto.lastSync` — toplam 86 birim + 51 integration; gerçek Mock HHS + Api + Worker ile uçtan uca denendi
 5b. ✅ Olaylar: `POST /olay-dinleme` + `/sistem-olay-dinleme` (anonim, 202, `event_inbox` idempotent, işleme Worker'da), BAKIYE → tek hesap bakiyesi (ayrı kota), rıza olayları → durum tazeleme, ayrık GKD (`gkdYontem: "A"`, olay veya GET ile tamamlanır), abonelik (Worker açılışı + 02:00), rıza bakımı 03:00 (S, 7 gün kala uyarı, takılı B/Y) — toplam 89 birim + 67 integration; gerçek Mock HHS olaylarıyla uçtan uca denendi
-6. Uçtan uca test (Mock HHS + backend)
+6. ✅ Uçtan uca test (`FinCopilot.E2ETests`): Mock HHS container (Dockerfile) + SQL + Api Kestrel + Hangfire, 4 senaryo; GitHub Actions CI (`.github/workflows/ci.yml`) — toplam 89 birim + 67 integration + 4 E2E
+
+**Faz 2 backend bitti.** Sırada Faz 2'nin mobil kısmı: Flutter iskeleti, onboarding (telefon + SMS + PIN), banka bağla akışı (TCKN, GKD yönlendirme/deep link, ayrık GKD bekleme ekranı), hesap/kart listesi. Başlamadan kararları sor (proje yapısı, HTTP istemcisi, güvenli depolama, deep link paketi, routing).
 
 **Backend'i çalıştırma:** bkz. [api/README.md](api/README.md) (`docker compose up -d sqlserver` → `dotnet ef database update` → Api `http://localhost:8080`).
 

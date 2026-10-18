@@ -12,7 +12,8 @@ src/
   FinCopilot.Worker          Hangfire sunucusu (zamanlı senkron vb.)
 tests/
   FinCopilot.UnitTests        Docker gerektirmez
-  FinCopilot.IntegrationTests Testcontainers ile gerçek SQL Server 2022 (Docker Desktop açık olmalı)
+  FinCopilot.IntegrationTests Testcontainers ile gerçek SQL Server 2022, HHS sahte (FakeHhsClient)
+  FinCopilot.E2ETests         Gerçek Mock HHS (mock-hhs/Dockerfile'dan container) + SQL Server + Api (Kestrel) + Hangfire
 ```
 Paket sürümleri tek yerde: `Directory.Packages.props`. Uyarılar hata sayılır (açıklı paketler dahil).
 
@@ -88,6 +89,14 @@ Worker da `Hhs` bölümüne (YÖS kodu + banka adresleri) ihtiyaç duyar; Api il
 ```
 dotnet test api/FinCopilot.sln
 ```
+Docker Desktop açık olmalı (entegrasyon ve uçtan uca testler). İlk çalıştırmada Mock HHS imajı build edilir (~1 dk).
+
+Uçtan uca senaryolar (`FinCopilot.E2ETests`): mobilin yaptığını yapar, banka sayfalarını HTML formlarıyla doldurur, deep link'i `Location` başlığından okur.
+- Yönlendirmeli GKD → 12 aylık ilk yükleme (KMH, taksit, banka kartı kuralı) → zamanlı senkron → uygulamadan iptal (bankada 03)
+- Ayrık GKD → olayla bağlanma (polling yok) → maaş yattı → BAKIYE olayı → bankadan iptal olayı (02)
+- Bankada vazgeçme (13), bankaya başka kimlikle giriş (08)
+
+CI: `.github/workflows/ci.yml`. Her push/PR'da Mock HHS pytest + .NET build ve üç test projesi sırayla.
 
 ## Yeni migration
 ```
