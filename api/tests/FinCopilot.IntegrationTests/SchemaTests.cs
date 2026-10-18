@@ -91,7 +91,9 @@ public class SchemaTests(ApiFactory factory)
 
         await using (var db = factory.CreateDbContext())
         {
-            db.AddRange(user, consent, account, card, cardTx);
+            var device = new UserDevice { Id = Guid.NewGuid(), UserId = user.Id, DeviceId = "d1", Platform = "android" };
+            db.AddRange(user, consent, account, card, cardTx, device);
+            db.Add(new UserSession { UserId = user.Id, UserDeviceId = device.Id, RefreshTokenHash = Guid.NewGuid().ToString("N"), ExpiresAt = DateTimeOffset.UtcNow.AddDays(1) });
             db.Add(new ConsentToken { ConsentId = consent.Id, AccessTokenEnc = [1, 2, 3], AccessExpiresAt = DateTimeOffset.UtcNow });
             db.Add(new Transaction { AccountId = account.Id, IslNo = "T1", Amount = 99.90m, Currency = "TRY", Direction = "B", OccurredAt = DateTimeOffset.UtcNow });
             db.Add(new BalanceSnapshot { AccountId = account.Id, BkyTtr = 1234.50m, ParaBirimi = "TRY", BkyZmn = DateTimeOffset.UtcNow, Source = "sync" });
@@ -103,6 +105,8 @@ public class SchemaTests(ApiFactory factory)
         {
             await db.Users.Where(u => u.Id == user.Id).ExecuteDeleteAsync();
 
+            Assert.False(await db.UserSessions.AnyAsync(s => s.UserId == user.Id));
+            Assert.False(await db.UserDevices.AnyAsync(d => d.UserId == user.Id));
             Assert.False(await db.Consents.AnyAsync(c => c.UserId == user.Id));
             Assert.False(await db.ConsentTokens.AnyAsync(t => t.ConsentId == consent.Id));
             Assert.False(await db.Accounts.AnyAsync(a => a.UserId == user.Id));

@@ -12,6 +12,8 @@ public interface IAppDbContext
     DbSet<User> Users { get; }
     DbSet<UserDevice> UserDevices { get; }
     DbSet<UserSettings> UserSettings { get; }
+    DbSet<OtpChallenge> OtpChallenges { get; }
+    DbSet<UserSession> UserSessions { get; }
 
     DbSet<Bank> Banks { get; }
     DbSet<Consent> Consents { get; }

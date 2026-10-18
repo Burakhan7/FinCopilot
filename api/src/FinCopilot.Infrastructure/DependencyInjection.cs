@@ -1,4 +1,6 @@
 using FinCopilot.Application.Abstractions;
+using FinCopilot.Application.Auth;
+using FinCopilot.Infrastructure.Auth;
 using FinCopilot.Infrastructure.Persistence;
 using FinCopilot.Infrastructure.Security;
 using Microsoft.AspNetCore.DataProtection;
@@ -26,6 +28,12 @@ public static class DependencyInjection
         services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
 
         services.AddSingleton(TimeProvider.System);
+
+        services.AddOptions<AuthOptions>().Bind(configuration.GetSection(AuthOptions.SectionName));
+        services.AddOptions<JwtOptions>().Bind(configuration.GetSection(JwtOptions.SectionName));
+        services.AddSingleton<IPinHasher, PinHasher>();
+        services.AddSingleton<ITokenService, JwtTokenService>();
+        services.AddSingleton<ISmsSender, LoggingSmsSender>();
 
         return services;
     }

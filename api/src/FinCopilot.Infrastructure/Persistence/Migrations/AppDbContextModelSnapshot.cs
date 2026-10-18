@@ -1214,6 +1214,50 @@ namespace FinCopilot.Infrastructure.Persistence.Migrations
                     b.ToTable("recurring_items");
                 });
 
+            modelBuilder.Entity("FinCopilot.Domain.Identity.OtpChallenge", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int")
+                        .HasColumnName("attempts");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("code_hash");
+
+                    b.Property<DateTimeOffset?>("ConsumedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("consumed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("phone");
+
+                    b.HasKey("Id")
+                        .HasName("pk_otp_challenges");
+
+                    b.HasIndex("Phone", "CreatedAt")
+                        .HasDatabaseName("ix_otp_challenges_phone_created_at");
+
+                    b.ToTable("otp_challenges");
+                });
+
             modelBuilder.Entity("FinCopilot.Domain.Identity.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1225,10 +1269,18 @@ namespace FinCopilot.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetimeoffset")
                         .HasColumnName("created_at");
 
+                    b.Property<int>("FailedPinAttempts")
+                        .HasColumnType("int")
+                        .HasColumnName("failed_pin_attempts");
+
                     b.Property<string>("FullName")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)")
                         .HasColumnName("full_name");
+
+                    b.Property<DateTimeOffset?>("LockedUntil")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("locked_until");
 
                     b.Property<string>("Phone")
                         .IsRequired()
@@ -1305,6 +1357,72 @@ namespace FinCopilot.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_user_devices_user_id_device_id");
 
                     b.ToTable("user_devices");
+                });
+
+            modelBuilder.Entity("FinCopilot.Domain.Identity.UserSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("expires_at");
+
+                    b.Property<DateTimeOffset?>("LastUsedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("last_used_at");
+
+                    b.Property<string>("PreviousRefreshTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("previous_refresh_token_hash");
+
+                    b.Property<string>("RefreshTokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("refresh_token_hash");
+
+                    b.Property<string>("RevokeReason")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasColumnName("revoke_reason");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<Guid>("UserDeviceId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("user_device_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_user_sessions");
+
+                    b.HasIndex("PreviousRefreshTokenHash")
+                        .HasDatabaseName("ix_user_sessions_previous_refresh_token_hash");
+
+                    b.HasIndex("RefreshTokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_user_sessions_refresh_token_hash");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_user_sessions_user_id");
+
+                    b.HasIndex("UserDeviceId", "RevokedAt")
+                        .HasDatabaseName("ix_user_sessions_user_device_id_revoked_at");
+
+                    b.ToTable("user_sessions");
                 });
 
             modelBuilder.Entity("FinCopilot.Domain.Identity.UserSettings", b =>
@@ -1748,6 +1866,23 @@ namespace FinCopilot.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_user_devices_users_user_id");
+                });
+
+            modelBuilder.Entity("FinCopilot.Domain.Identity.UserSession", b =>
+                {
+                    b.HasOne("FinCopilot.Domain.Identity.UserDevice", null)
+                        .WithMany()
+                        .HasForeignKey("UserDeviceId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_sessions_user_devices_user_device_id");
+
+                    b.HasOne("FinCopilot.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_sessions_users_user_id");
                 });
 
             modelBuilder.Entity("FinCopilot.Domain.Identity.UserSettings", b =>

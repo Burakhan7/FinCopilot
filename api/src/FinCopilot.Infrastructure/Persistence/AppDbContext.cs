@@ -15,6 +15,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<User> Users => Set<User>();
     public DbSet<UserDevice> UserDevices => Set<UserDevice>();
     public DbSet<UserSettings> UserSettings => Set<UserSettings>();
+    public DbSet<OtpChallenge> OtpChallenges => Set<OtpChallenge>();
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
 
     public DbSet<Bank> Banks => Set<Bank>();
     public DbSet<Consent> Consents => Set<Consent>();

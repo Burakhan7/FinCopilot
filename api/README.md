@@ -24,6 +24,20 @@ dotnet run --project api/src/FinCopilot.Api        # http://localhost:8080/healt
 dotnet run --project api/src/FinCopilot.Worker
 ```
 
+## Kimlik uçları
+| Uç | Açıklama |
+|---|---|
+| `POST /auth/otp` `{phone}` | SMS kodu gönderir → `{challengeId, expiresAt}`. Development'ta kod hep `123456`, log'a `[SAHTE SMS]` olarak düşer |
+| `POST /auth/register` | `{phone, challengeId, code, fullName, pin, deviceId, platform}` → token'lar |
+| `POST /auth/login` | `{phone, pin, deviceId, platform, challengeId?, code?}`; yeni cihazda kodsuz istek `403 device_verification_required` |
+| `POST /auth/refresh` `{refreshToken}` | Token'ları döndürür; eski refresh tekrar kullanılırsa oturum kapanır |
+| `POST /auth/logout` | JWT ile; oturumu kapatır |
+| `GET /me` | JWT ile; profil |
+
+Hatalar ProblemDetails; istemci `code` alanına göre dallanır (`otp_invalid`, `otp_cooldown`, `otp_rate_limited`, `phone_already_registered`, `invalid_credentials`, `account_locked`, `device_verification_required`, `invalid_refresh_token`).
+
+Üretimde zorunlu: `Jwt__SigningKey` (≥32 bayt) ortam değişkeni. `Auth:OtpFixedCode` Development/Testing dışında verilirse Api açılmaz.
+
 ## Test
 ```
 dotnet test api/FinCopilot.sln

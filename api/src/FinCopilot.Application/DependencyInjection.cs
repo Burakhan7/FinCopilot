@@ -1,3 +1,4 @@
+using FinCopilot.Application.Auth;
 using FinCopilot.Application.Behaviors;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +17,9 @@ public static class DependencyInjection
             cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
         });
         services.AddValidatorsFromAssembly(assembly);
+
+        services.AddScoped<OtpService>();
+        services.AddScoped<SessionIssuer>();
 
         return services;
     }

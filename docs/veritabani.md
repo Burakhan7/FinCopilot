@@ -198,8 +198,10 @@ erDiagram
 ### Kimlik
 | Tablo | Sütunlar | Not |
 |---|---|---|
-| `users` | id, phone (UK), tckn_enc, tckn_hash (UK), full_name, pin_hash, created_at | TCKN Data Protection ile şifreli; arama hash ile |
-| `user_devices` | id, user_id, device_id, platform, fcm_token, last_seen_at | Cihaz bağlama + push |
+| `users` | id, phone (UK, E.164), tckn_enc, tckn_hash (UK), full_name, pin_hash, failed_pin_attempts, locked_until, created_at | TCKN ilk banka bağlamada alınır, Data Protection ile şifreli; arama hash ile. PIN: PBKDF2 (ASP.NET PasswordHasher). 5 hatalı PIN → 15 dk kilit |
+| `user_devices` | id, user_id, device_id, platform, fcm_token, last_seen_at · **UK** (user_id, device_id) | Cihaz bağlama + push. Yeni cihaz SMS ile doğrulanır |
+| `otp_challenges` | id, phone, code_hash, attempts, created_at, expires_at, consumed_at | SMS kodu: 3 dk, 5 deneme, tek kullanım; kod değil SHA-256 özeti saklanır |
+| `user_sessions` | id, user_id, user_device_id, refresh_token_hash (UK), previous_refresh_token_hash, created_at, expires_at, last_used_at, revoked_at, revoke_reason | Cihaz başına oturum, refresh token rotation; eski token tekrar gelirse oturum iptal |
 | `user_settings` | user_id (PK), payday_day, kmh_rate, card_interest_rate, late_interest_rate, timezone, notify_daily_brief, notify_alerts | Faiz oranları varsayılan TCMB azami, kullanıcı düzeltebilir |
 
 ### Rıza ve senkronizasyon
@@ -247,7 +249,7 @@ erDiagram
 - `recurring_items (user_id, status)`
 
 ## 4. Silme zinciri
-`users → consents → (consent_tokens, sync_jobs, accounts → transactions/balance_snapshots, cards → card_statements/card_transactions → installments)` ve `users → user_devices, user_settings, recurring_items, alerts, savings_events, goals` **cascade**. SQL Server çoklu cascade yolunu kabul etmediği için ikincil FK'ler (`accounts.user_id`, `cards.user_id`, `installments.card_id`, kategori/mağaza/tekrar bağlantıları) `NO ACTION`. Kullanıcı silinince tüm verisi tek komutla gider (KVKK; integration testiyle doğrulandı).
+`users → consents → (consent_tokens, sync_jobs, accounts → transactions/balance_snapshots, cards → card_statements/card_transactions → installments)` ve `users → user_devices, user_sessions, user_settings, recurring_items, alerts, savings_events, goals` **cascade**. SQL Server çoklu cascade yolunu kabul etmediği için ikincil FK'ler (`accounts.user_id`, `cards.user_id`, `installments.card_id`, `user_sessions.user_device_id`, kategori/mağaza/tekrar bağlantıları) `NO ACTION`. Kullanıcı silinince tüm verisi tek komutla gider (KVKK; integration testiyle doğrulandı).
 
 ## 5. Kurallar
 - ÖHVPS'ten gelen kayıtlar **upsert** edilir; tekillik ÖHVPS anahtarlarıyla (`isl_no`, `islem_no`, `hsp_ref`, `kart_ref`).

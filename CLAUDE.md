@@ -24,7 +24,7 @@ Bitirme projesi (Manisa Celal Bayar Üniv., teslim Haziran 2027). Geliştirici: 
 | AI servisi | Python FastAPI (`ai-service/`) |
 | Ana LLM | Gemini (function calling); karşılaştırma için Ollama yerel model |
 | Banka kartı harcamaları | Sadece hesap hareketlerinden okunur (kart hareketlerinde tekrar yok) |
-| Kullanıcı girişi | Kendi sistemimiz: telefon + SMS kodu + PIN + JWT |
+| Kullanıcı girişi | Kendi sistemimiz: telefon + SMS kodu + PIN + JWT. PIN: ASP.NET PasswordHasher. JWT HS256 (15 dk) + DB'de refresh (30 gün, rotation). Yeni cihaz: SMS + PIN, kayıtlı cihaz: PIN. TCKN ilk banka bağlamada alınır |
 | Hassas veri şifreleme | ASP.NET Data Protection (`ISecretProtector`), anahtar halkası SQL Server'da (`data_protection_keys`) |
 | Mapping | Elle (kütüphane yok) |
 | Doğrulama | FluentValidation, MediatR `ValidationBehavior` ile |
@@ -54,8 +54,8 @@ mobile/      Flutter (Faz 2 sonu – boş)
 
 ## Sıradaki: Faz 2 – .NET backend
 1. ✅ Solution iskeleti (Domain/Application/Infrastructure/Api/Worker), SQL Server, ilk migration — 13 birim + 7 integration testi
-2. Kullanıcı kaydı/giriş
-3. Rıza modülü (banka bağla, drmKod, durum takibi, token şifreleme)
+2. ✅ Kullanıcı kaydı/giriş (`/auth/*`, `/me`) — toplam 36 birim + 22 integration testi
+3. Rıza modülü (banka bağla, TCKN alma, drmKod, durum takibi, token şifreleme)
 4. `IHhsClient` adapter (MockHhsClient)
 5. Senkronizasyon: ilk 12 ay yükleme, Hangfire ile günde ≤4 sorgu, `POST /olay-dinleme`
 6. Uçtan uca test (Mock HHS + backend)
@@ -64,7 +64,9 @@ mobile/      Flutter (Faz 2 sonu – boş)
 
 **Açık konular (sonra sorulacak):**
 - Data Protection anahtarları DB'de düz XML; üretimde anahtarların sertifika/ortam anahtarıyla ayrıca şifrelenmesi (`ProtectKeysWith...`).
-- `tckn_hash` için HMAC anahtarının nerede tutulacağı (2. adımda).
+- `tckn_hash` için HMAC anahtarının nerede tutulacağı (3. adımda, TCKN banka bağlamada alınıyor).
+- Gerçek SMS sağlayıcısı (şimdilik `LoggingSmsSender` sadece loga yazar).
+- Access token iptali: logout sadece refresh'i kapatır, access token en fazla 15 dk daha geçerli kalır.
 
 ## Mock HHS'yi çalıştırma
 ```

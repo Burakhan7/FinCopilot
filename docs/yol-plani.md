@@ -31,6 +31,10 @@ Varsayımlar: Ekim 2026 – Haziran 2027, bitirme teslimi Haziran 2027. Güz dö
 | Doğrulama | FluentValidation (MediatR pipeline) | 18.10.2026 |
 | Test | xUnit + Testcontainers (SQL Server 2022) | 18.10.2026 |
 | Geliştirme DB | Docker'da SQL Server 2022 (`docker-compose.yml`) | 18.10.2026 |
+| PIN hash | ASP.NET PasswordHasher (PBKDF2) | 18.10.2026 |
+| JWT | HS256, access 15 dk, refresh 30 gün (DB'de, rotation + tekrar kullanım tespiti) | 18.10.2026 |
+| TCKN alma anı | İlk banka bağlamada (kayıtta değil) | 18.10.2026 |
+| Yeni cihaz girişi | SMS + PIN; kayıtlı cihazda sadece PIN | 18.10.2026 |
 
 Not: Teknoloji ve mimari kararları Burakhan verir; yeni bir karar gerektiğinde seçenekler sunulur.
 

@@ -12,6 +12,7 @@ namespace FinCopilot.IntegrationTests;
 public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public const string TestBankCode = "9001";
+    public const string OtpCode = "123456";
 
     private readonly MsSqlContainer _db = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
 
@@ -19,6 +20,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:FinCopilot", _db.GetConnectionString());
+        builder.UseSetting("Jwt:SigningKey", "entegrasyon-testi-icin-en-az-otuz-iki-baytlik-anahtar");
+        builder.UseSetting("Auth:OtpFixedCode", OtpCode);
+        builder.UseSetting("Auth:OtpResendCooldown", "00:00:00");
     }
 
     public async Task InitializeAsync()

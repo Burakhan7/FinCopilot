@@ -30,6 +30,33 @@ internal sealed class UserDeviceConfiguration : IEntityTypeConfiguration<UserDev
     }
 }
 
+internal sealed class OtpChallengeConfiguration : IEntityTypeConfiguration<OtpChallenge>
+{
+    public void Configure(EntityTypeBuilder<OtpChallenge> b)
+    {
+        b.Property(x => x.Phone).HasMaxLength(20);
+        b.Property(x => x.CodeHash).HasMaxLength(64);
+        b.HasIndex(x => new { x.Phone, x.CreatedAt });
+    }
+}
+
+internal sealed class UserSessionConfiguration : IEntityTypeConfiguration<UserSession>
+{
+    public void Configure(EntityTypeBuilder<UserSession> b)
+    {
+        b.Property(x => x.RefreshTokenHash).HasMaxLength(64);
+        b.HasIndex(x => x.RefreshTokenHash).IsUnique();
+        b.Property(x => x.PreviousRefreshTokenHash).HasMaxLength(64);
+        b.HasIndex(x => x.PreviousRefreshTokenHash);
+        b.Property(x => x.RevokeReason).HasMaxLength(32);
+
+        b.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        // users → user_devices zaten cascade; ikinci yol olmasın diye NoAction.
+        b.HasOne<UserDevice>().WithMany().HasForeignKey(x => x.UserDeviceId).OnDelete(DeleteBehavior.NoAction);
+        b.HasIndex(x => new { x.UserDeviceId, x.RevokedAt });
+    }
+}
+
 internal sealed class UserSettingsConfiguration : IEntityTypeConfiguration<UserSettings>
 {
     public void Configure(EntityTypeBuilder<UserSettings> b)
