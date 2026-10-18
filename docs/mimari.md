@@ -11,7 +11,7 @@ flowchart LR
     end
 
     subgraph Backend["Bizim backend"]
-        API["Core API<br/>.NET 8"]
+        API["Core API<br/>.NET 10"]
         WORKER["Worker<br/>Hangfire işleri"]
         AI["AI Service<br/>FastAPI"]
         DB[("SQL Server")]
@@ -54,7 +54,7 @@ flowchart LR
 | Bileşen | Sorumluluk | Teknoloji |
 |---|---|---|
 | **Mobile** | Arayüz, banka bağlama akışı, sohbet ekranı, widget, push alma | Flutter |
-| **Core API** | Kimlik, rıza yönetimi, ÖHVPS istemcisi, analitik ve kural motoru, LLM tool uçları, olay dinleme | .NET 8, Clean Architecture, CQRS/MediatR, EF Core |
+| **Core API** | Kimlik, rıza yönetimi, ÖHVPS istemcisi, analitik ve kural motoru, LLM tool uçları, olay dinleme | .NET 10, Clean Architecture, CQRS/MediatR, EF Core |
 | **Worker** | Zamanlı senkronizasyon, uyarı kuralları, sabah brifingi, rıza süresi kontrolü, faiz ve TÜFE güncelleme | Hangfire (Core API ile aynı çözüm, ayrı süreç) |
 | **AI Service** | Kategorizasyon (Regex → ML → LLM fallback), tekrarlayan kalem tespiti, LLM orkestrasyonu, PII maskeleme, rakam doğrulama | Python, FastAPI, scikit-learn |
 | **Mock HHS** | ÖHVPS v2.0.0 Hesap Bilgisi uçları, sahte GKD sayfası, sentetik veri, olay gönderimi | Python, FastAPI |
@@ -169,8 +169,8 @@ sequenceDiagram
 | Konu | Karar |
 |---|---|
 | Banka şifresi | Hiç görülmez; sadece sahte banka sayfasına girilir |
-| ÖHVPS tokenları | Veritabanında AES-GCM ile şifreli, mobile asla inmez |
-| TCKN, IBAN | Şifreli saklanır; arama için ayrı hash sütunu |
+| ÖHVPS tokenları | Veritabanında ASP.NET Data Protection ile şifreli, mobile asla inmez. Anahtar halkası SQL Server'da (`data_protection_keys`), Api ve Worker paylaşır |
+| TCKN, IBAN | Şifreli saklanır (amaç başına ayrı protector); arama için ayrı hash sütunu |
 | LLM'e giden veri | PII maskeli, sadece tool çıktısı ve özet |
 | LLM yetkisi | Sadece okuma tool'ları; yazma yok |
 | Internal tool uçları | Sadece servis ağı + kısa ömürlü, kullanıcıya bağlı servis token'ı |

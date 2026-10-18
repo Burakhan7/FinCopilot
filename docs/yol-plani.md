@@ -6,7 +6,7 @@ Varsayımlar: Ekim 2026 – Haziran 2027, bitirme teslimi Haziran 2027. Güz dö
 | Katman | Teknoloji |
 |---|---|
 | Mobil | Flutter + Riverpod |
-| Ana API | .NET 8, Clean Architecture, CQRS/MediatR, EF Core |
+| Ana API | .NET 10 LTS, Clean Architecture, CQRS/MediatR 12, EF Core 10 |
 | Veri / AI servisi | Python FastAPI (kategorizasyon, tahmin, LLM orkestrasyonu) |
 | Mock HHS | FastAPI (ÖHVPS v2.0.0 şemalarına birebir) |
 | Veritabanı | Microsoft SQL Server 2022 |
@@ -23,6 +23,14 @@ Varsayımlar: Ekim 2026 – Haziran 2027, bitirme teslimi Haziran 2027. Güz dö
 | Arka plan işleri | Hangfire (SQL Server deposu) | 14.10.2026 |
 | Ana LLM | Gemini (karşılaştırma için yerel model Ollama) | 14.10.2026 |
 | Flutter state management | Riverpod | 14.10.2026 |
+| .NET sürümü | .NET 10 LTS (.NET 8 desteği 10.11.2026'da bitiyor) | 18.10.2026 |
+| Mediator | MediatR 12.5.0 (son Apache-2.0 sürüm; 13+ ticari) | 18.10.2026 |
+| Kullanıcı girişi | Kendi sistemimiz: telefon + SMS kodu + PIN + JWT | 18.10.2026 |
+| Hassas veri şifreleme | ASP.NET Data Protection, anahtarlar SQL Server'da | 18.10.2026 |
+| Mapping | Elle (kütüphane yok) | 18.10.2026 |
+| Doğrulama | FluentValidation (MediatR pipeline) | 18.10.2026 |
+| Test | xUnit + Testcontainers (SQL Server 2022) | 18.10.2026 |
+| Geliştirme DB | Docker'da SQL Server 2022 (`docker-compose.yml`) | 18.10.2026 |
 
 Not: Teknoloji ve mimari kararları Burakhan verir; yeni bir karar gerektiğinde seçenekler sunulur.
 

@@ -17,20 +17,26 @@ Bitirme projesi (Manisa Celal Bayar Üniv., teslim Haziran 2027). Geliştirici: 
 | Konu | Karar |
 |---|---|
 | Mobil | Flutter + Riverpod |
-| Ana API | .NET 8, Clean Architecture, CQRS/MediatR, EF Core |
+| Ana API | .NET 10 LTS, Clean Architecture, CQRS/MediatR **12.5.0** (13+ ticari, yükseltme), EF Core 10 |
 | Veritabanı | Microsoft SQL Server 2022 |
 | Arka plan işleri | Hangfire (SQL Server deposu) |
 | Mock HHS | Python FastAPI (`mock-hhs/`, durumu SQLite'ta) |
 | AI servisi | Python FastAPI (`ai-service/`) |
 | Ana LLM | Gemini (function calling); karşılaştırma için Ollama yerel model |
 | Banka kartı harcamaları | Sadece hesap hareketlerinden okunur (kart hareketlerinde tekrar yok) |
+| Kullanıcı girişi | Kendi sistemimiz: telefon + SMS kodu + PIN + JWT |
+| Hassas veri şifreleme | ASP.NET Data Protection (`ISecretProtector`), anahtar halkası SQL Server'da (`data_protection_keys`) |
+| Mapping | Elle (kütüphane yok) |
+| Doğrulama | FluentValidation, MediatR `ValidationBehavior` ile |
+| Test | xUnit + Testcontainers (gerçek SQL Server 2022; Docker Desktop açık olmalı) |
+| Geliştirme DB | Docker'da SQL Server 2022 (`docker-compose.yml`, sa şifresi `FinCopilot_Dev_2026!`) |
 
 ## Repo
 ```
 docs/        mimari.md, veritabani.md (ER + tablolar), backend-fonksiyon-listesi.md,
              ohvps-hesap-bilgisi-referans.md, mock-veri-parametreleri.md, yol-plani.md
 mock-hhs/    Sahte banka (bitti, 36 test)
-api/         .NET backend (Faz 2 – henüz boş)
+api/         .NET backend (Faz 2 – iskelet + ilk migration hazır, bkz. api/README.md)
 ai-service/  (Faz 3+ – boş)
 mobile/      Flutter (Faz 2 sonu – boş)
 ```
@@ -47,20 +53,18 @@ mobile/      Flutter (Faz 2 sonu – boş)
 - Demo betikleri: `scripts/demo_akis.py`, `scripts/demo_ayrik_olay.py`
 
 ## Sıradaki: Faz 2 – .NET backend
-1. Solution iskeleti (Domain/Application/Infrastructure/Api/Worker), SQL Server, ilk migration (`docs/veritabani.md`)
+1. ✅ Solution iskeleti (Domain/Application/Infrastructure/Api/Worker), SQL Server, ilk migration — 13 birim + 7 integration testi
 2. Kullanıcı kaydı/giriş
 3. Rıza modülü (banka bağla, drmKod, durum takibi, token şifreleme)
 4. `IHhsClient` adapter (MockHhsClient)
 5. Senkronizasyon: ilk 12 ay yükleme, Hangfire ile günde ≤4 sorgu, `POST /olay-dinleme`
 6. Uçtan uca test (Mock HHS + backend)
 
-**Bekleyen kararlar (Burakhan'a sor):**
-1. Giriş: kendi sistemimiz (telefon + SMS kodu + PIN + JWT) mı, Firebase Auth mu? (öneri: kendi sistemimiz)
-2. Banka token şifreleme: AES-GCM (anahtar ortam değişkeninde) mi, ASP.NET Data Protection mı? (öneri: AES-GCM)
-3. Mapping: elle / Mapster / AutoMapper (yeni sürümleri ücretli) (öneri: elle veya Mapster)
-4. Doğrulama: FluentValidation mı, DataAnnotations mı? (öneri: FluentValidation)
-5. Test: xUnit + Testcontainers (Docker gerekir) mı, bellek içi DB mi? (öneri: Testcontainers)
-6. Bilgisayarda Docker var mı? Yoksa SQL Server Express/LocalDB.
+**Backend'i çalıştırma:** bkz. [api/README.md](api/README.md) (`docker compose up -d sqlserver` → `dotnet ef database update` → Api `http://localhost:8080`).
+
+**Açık konular (sonra sorulacak):**
+- Data Protection anahtarları DB'de düz XML; üretimde anahtarların sertifika/ortam anahtarıyla ayrıca şifrelenmesi (`ProtectKeysWith...`).
+- `tckn_hash` için HMAC anahtarının nerede tutulacağı (2. adımda).
 
 ## Mock HHS'yi çalıştırma
 ```

@@ -17,7 +17,7 @@ Kullanıcının farklı bankalardaki hesap ve kart verilerini Açık Bankacılı
 | Klasör | İçerik | Teknoloji |
 |---|---|---|
 | `mobile/` | Mobil istemci | Flutter |
-| `api/` | Ana backend: kullanıcı, rıza, senkronizasyon, kural motoru | .NET 8, Clean Architecture, CQRS/MediatR, EF Core |
+| `api/` | Ana backend: kullanıcı, rıza, senkronizasyon, kural motoru | .NET 10, Clean Architecture, CQRS/MediatR, EF Core |
 | `ai-service/` | Kategorizasyon, tahmin, LLM orkestrasyonu | Python, FastAPI |
 | `mock-hhs/` | ÖHVPS şemalarına uyumlu sahte banka (HHS) sunucusu ve GKD simülasyonu | Python, FastAPI |
 | `docs/` | Spesifikasyon notları, fonksiyon listesi, yol planı | Markdown |

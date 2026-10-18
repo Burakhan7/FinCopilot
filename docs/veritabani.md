@@ -5,7 +5,8 @@ Microsoft SQL Server 2022 · EF Core (code-first) · Para tutarları `decimal(19
 | Kavram | SQL Server karşılığı |
 |---|---|
 | JSON alanlar (`payload`, `evidence`, `fx_info`, `izin_turleri`) | `nvarchar(max)` + `CHECK (ISJSON(col) = 1)` |
-| Şifreli alanlar (`*_enc`) | `varbinary(max)` (uygulama tarafında AES-GCM) |
+| Şifreli alanlar (`*_enc`) | `varbinary(max)` (uygulama tarafında ASP.NET Data Protection) |
+| Adlandırma | Tablo, sütun, anahtar ve indeks adları snake_case (EF tarafında `ApplySnakeCaseNames`) |
 | Boolean | `bit` |
 | Metin | `nvarchar(n)` (Türkçe karakter için) |
 | Tek aktif rıza kısıtı | Filtered unique index |
@@ -197,7 +198,7 @@ erDiagram
 ### Kimlik
 | Tablo | Sütunlar | Not |
 |---|---|---|
-| `users` | id, phone (UK), tckn_enc, tckn_hash (UK), full_name, pin_hash, created_at | TCKN AES-GCM ile şifreli; arama hash ile |
+| `users` | id, phone (UK), tckn_enc, tckn_hash (UK), full_name, pin_hash, created_at | TCKN Data Protection ile şifreli; arama hash ile |
 | `user_devices` | id, user_id, device_id, platform, fcm_token, last_seen_at | Cihaz bağlama + push |
 | `user_settings` | user_id (PK), payday_day, kmh_rate, card_interest_rate, late_interest_rate, timezone, notify_daily_brief, notify_alerts | Faiz oranları varsayılan TCMB azami, kullanıcı düzeltebilir |
 
@@ -209,6 +210,7 @@ erDiagram
 | `consent_tokens` | consent_id (PK), access_token_enc, access_expires_at, refresh_token_enc, refresh_expires_at, updated_at | Şifreli; sadece Infrastructure okur |
 | `sync_jobs` | id, consent_id, resource, psu_initiated (E/H), window_start, window_end, status, http_status, error_code, started_at, finished_at | Günde ≤4 sistem sorgusu kotası bu tablodan sayılır |
 | `event_inbox` | id, olay_no (UK), olay_tipi, kaynak_tipi, kaynak_no, payload (JSON), received_at, processed_at | Olay dinleme idempotency |
+| `data_protection_keys` | id, friendly_name, xml | ASP.NET Data Protection anahtar halkası (Api + Worker ortak) |
 
 ### Hesap ve kart verisi (ÖHVPS'ten)
 | Tablo | Sütunlar | Kaynak alan |
@@ -216,7 +218,7 @@ erDiagram
 | `accounts` | id, user_id, consent_id, hhs_kod, hsp_ref, hsp_no_enc, hsp_no_masked, hsp_shb, sube_adi, kisa_ad, urun_adi, para_birimi, hsp_tur, hsp_tip, hsp_drm, acilis_trh, is_active · **UK** (consent_id, hsp_ref) | `hspTml`, `hspDty` |
 | `balance_snapshots` | id, account_id, bky_ttr, blk_ttr, para_birimi, kul_krd_ttr, krd_dhl_gstr, bky_zmn, source (sync/event) | `bky`, `krdHsp` |
 | `transactions` | id, account_id, isl_no, ref_no, amount, currency, direction (B/A/N), isl_tur, isl_amc, kanal, description_raw, ohk_msj, counterparty_name, counterparty_iban_masked, occurred_at, merchant_id, category_id, category_source, category_confidence, recurring_item_id · **UK** (account_id, isl_no) | `islTml`, `islDty` |
-| `cards` | id, user_id, consent_id, hhs_kod, kart_ref, son_no, kart_tipi, alt_kart_tipi, kart_formu, kart_turu, kart_statu, kart_sema, urun_adi · **UK** (consent_id, kart_ref) | kart listesi (07) |
+| `cards` | id, user_id, consent_id, hhs_kod, kart_ref, son_no, kart_tipi, alt_kart_tipi, kart_formu, kart_turu, kart_statu, kart_sema, urun_adi, is_active · **UK** (consent_id, kart_ref) | kart listesi (07) |
 | `card_statements` | id, card_id, statement_date, due_date, period_debt, min_payment, credit_limit, used_limit, cash_limit, used_cash_limit, currency, fetched_at | kart-detay (08) ⚠ alan adları doğrulanacak |
 | `card_transactions` | id, card_id, islem_no, occurred_at, amount, currency, installment_count, isl_turu, merchant_raw, description_raw, fx_info (JSON), merchant_id, category_id, category_source, category_confidence, recurring_item_id · **UK** (card_id, islem_no) | kart-hareketleri (09) ⚠ |
 | `installments` | id, card_transaction_id, card_id, installment_no, total_installments, amount, due_month | Taksitli işlemden türetilir |
@@ -244,7 +246,10 @@ erDiagram
 - `sync_jobs (consent_id, started_at)` — kota sayımı
 - `recurring_items (user_id, status)`
 
-## 4. Kurallar
+## 4. Silme zinciri
+`users → consents → (consent_tokens, sync_jobs, accounts → transactions/balance_snapshots, cards → card_statements/card_transactions → installments)` ve `users → user_devices, user_settings, recurring_items, alerts, savings_events, goals` **cascade**. SQL Server çoklu cascade yolunu kabul etmediği için ikincil FK'ler (`accounts.user_id`, `cards.user_id`, `installments.card_id`, kategori/mağaza/tekrar bağlantıları) `NO ACTION`. Kullanıcı silinince tüm verisi tek komutla gider (KVKK; integration testiyle doğrulandı).
+
+## 5. Kurallar
 - ÖHVPS'ten gelen kayıtlar **upsert** edilir; tekillik ÖHVPS anahtarlarıyla (`isl_no`, `islem_no`, `hsp_ref`, `kart_ref`).
 - Rıza `S` veya `I` olduğunda veri silinmez, `is_active=false` olur. Kullanıcı hesap silerse tüm veri kalıcı silinir (KVKK).
 - `description_raw` ve `counterparty_name` LLM'e gönderilmeden önce maskelenir.
