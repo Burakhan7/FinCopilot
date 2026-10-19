@@ -23,7 +23,7 @@ abstract final class AppTheme {
           scrolledUnderElevation: 1,
           centerTitle: true,
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: AppColors.surfaceLight,
           elevation: 0,
           shape: RoundedRectangleBorder(
@@ -108,7 +108,7 @@ abstract final class AppTheme {
           scrolledUnderElevation: 1,
           centerTitle: true,
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: AppColors.surfaceDark,
           elevation: 0,
           shape: RoundedRectangleBorder(
