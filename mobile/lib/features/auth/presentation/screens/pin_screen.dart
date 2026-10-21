@@ -138,6 +138,7 @@ class _PinScreenState extends ConsumerState<PinScreen> {
                 child: PinCodeTextField(
                   appContext: context,
                   controller: _pinController,
+                  autoDisposeControllers: false, // controller'ı ekran dispose ediyor
                   length: AppConstants.pinLength,
                   keyboardType: TextInputType.number,
                   obscureText: true,

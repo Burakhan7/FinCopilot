@@ -120,6 +120,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               PinCodeTextField(
                 appContext: context,
                 controller: _otpController,
+                autoDisposeControllers: false, // controller'ı ekran dispose ediyor
                 length: AppConstants.otpLength,
                 keyboardType: TextInputType.number,
                 animationType: AnimationType.fade,

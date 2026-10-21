@@ -1,30 +1,72 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:fincopilot/core/storage/secure_storage.dart';
+import 'package:fincopilot/features/auth/presentation/screens/login_screen.dart';
+import 'package:fincopilot/features/auth/presentation/screens/pin_screen.dart';
+import 'package:fincopilot/features/onboarding/onboarding_screen.dart';
 import 'package:fincopilot/main.dart';
 
+/// Testte flutter_secure_storage'ın platform kanalı yok: bellek içi sahte depolama.
+class FakeSecureStorage extends SecureStorageService {
+  FakeSecureStorage({this.onboardingDone = false, this.accessToken, this.pin});
+
+  final bool onboardingDone;
+  final String? accessToken;
+  final String? pin;
+
+  @override
+  Future<bool> isOnboardingDone() async => onboardingDone;
+
+  @override
+  Future<String?> getAccessToken() async => accessToken;
+
+  @override
+  Future<bool> hasPin() async => pin != null;
+}
+
+Future<void> pumpApp(WidgetTester tester, FakeSecureStorage storage) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [secureStorageProvider.overrideWithValue(storage)],
+      child: const FinCopilotApp(),
+    ),
+  );
+  // Açılış ekranı 1,5 sn bekleyip yönlendirir.
+  await tester.pump(const Duration(milliseconds: 1600));
+  await tester.pump(const Duration(milliseconds: 500));
+}
+
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('Açılış ekranı uygulama adını gösterir', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [secureStorageProvider.overrideWithValue(FakeSecureStorage())],
+        child: const FinCopilotApp(),
+      ),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text('FinCopilot'), findsOneWidget);
+    expect(find.text('Akıllı Finans Koçun'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    await tester.pump(const Duration(seconds: 2)); // bekleyen zamanlayıcıyı bitir
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('İlk açılışta tanıtım ekranına gider', (tester) async {
+    await pumpApp(tester, FakeSecureStorage());
+
+    expect(find.byType(OnboardingScreen), findsOneWidget);
+  });
+
+  testWidgets('Tanıtımı görmüş ama oturumu yoksa girişe gider', (tester) async {
+    await pumpApp(tester, FakeSecureStorage(onboardingDone: true));
+
+    expect(find.byType(LoginScreen), findsOneWidget);
+  });
+
+  testWidgets('Oturumu ve PIN\'i varsa PIN ekranına gider', (tester) async {
+    await pumpApp(tester, FakeSecureStorage(onboardingDone: true, accessToken: 'token', pin: 'hash'));
+
+    expect(find.byType(PinScreen), findsOneWidget);
   });
 }
